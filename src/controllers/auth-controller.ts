@@ -1,0 +1,123 @@
+import pool from "../db/pool.js";
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
+import type { Request, Response } from "express";
+import type { UserTokens } from "../models/Types/UsersTypes.js";
+
+import { ACCESS_TOKEN_EXPIRY, getRefreshTokenExpiry } from "../Configs/auth-configs.js";
+
+
+export async function login(req: Request, res: Response) {
+    const { identification, password } = req.body;
+
+    try {
+        const dataRow = await pool.query('SELECT id,username,email,password_hash FROM users WHERE (username=$1 OR email=$1 );',
+            [identification]
+        );
+
+        const userInfo = dataRow.rows[0];
+        if (!userInfo) return res.status(404).json({ err: 'No user found in database' });
+        const isValidPassword = await bcrypt.compare(password, userInfo.password_hash);
+        if (!isValidPassword) return res.status(401).json({ err: 'Wrong login credentials please try again' });
+        const accessToken = jwt.sign(
+            { userID: userInfo.id },
+            process.env.JWT_SECRET!,
+            { expiresIn: ACCESS_TOKEN_EXPIRY }
+        );
+        const refreshToken = crypto.randomBytes(40).toString('hex');
+        const hashedRefreshToken = (await bcrypt.hash(refreshToken, 10));
+        await pool.query(
+            "INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)",
+            [userInfo.id, hashedRefreshToken, getRefreshTokenExpiry()]
+        );
+        await pool.query('DELETE FROM refresh_tokens where user_id=$1', [userInfo.id]);
+        res.status(200).json(
+            {
+                id: userInfo.id,
+                email: userInfo.email,
+                username: userInfo.username,
+                accessToken: accessToken,
+                refreshToken: refreshToken
+            });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ err: 'Sever internal error, try again later' });
+    }
+
+    /* im aware that i should never send descriptive status code and error messages for security and privacy puposes
+     but i think it is fine for this scale as there are no users that are even using it in this early scale
+     for example we can delibrately send same error message and status code for both user not exist and user password invalid to maintain privacy
+     while a general catch is necessary so that we know when the api request itself got crashed or sever is facing some issue
+
+     * forgot to delete the old refresh key from the table at login, silly mistake but not good to do i have to keep in mind going forward
+     * also learnt that bcrypt.compare takes time and is a asyncronous activity which we have to await before use
+
+    but even same status code and same error message might not be enoguh for some systems
+    because people can still notice the diffrence between response time of API for example since we return early if there is no data or user
+    in database but if they exist we compare that database users password with entered password which is slow to do because of bcrypt.compare
+    which it should be to ensure it makes no mistakes. but that aside this diffrence in ms can be used to kind of identify if user has an account or not
+    
+    only if their network is stable om both request i think because if it wasnt then the diffrence might get masked by network delays
+    */
+}
+
+/*
+* TODO 
+! Get the refreshToken of user in header
+! querry the db looking for all sessions that has user_id matching the one sent over from frontend
+! match if atleast 1 of their session has the recovery key that user sent
+! make a new access token with expiry 
+! make a new refreshToken send the raw tokens to user while hash the tokens to store in db
+! update the refreshToken in table with updated expiry date and new hashed refresh token
+
+*/
+
+
+export async function refreshAccessToken(req: Request, res: Response) {
+    const { userID, refreshToken } = req.body;
+    if (!userID) {
+        return res.status(401).json({ err: 'No user id provided in request body' });
+    } else if (!refreshToken) {
+        return res.status(401).json({ err: 'No refresh token provided in request body' });
+    }
+    const query = 'SELECT * FROM refresh_tokens WHERE user_id=$1;';
+    try {
+        const querryResponse = await pool.query(query, [userID]);
+        const data = querryResponse.rows;
+        if (data.length <= 0) {
+            return res.status(400).json({ err: 'No session found for the said user' });
+        }
+        for (let i = 0; i < data.length; i++) {
+            const session: UserTokens = data[i];
+            const isValidRefreshToken = await bcrypt.compare(refreshToken, session.token_hash);
+            if (!session.expires_at) {
+                return res.status(500).json({ err: 'Malformed data stored in database' });
+            }
+            const sessionID = session.id;
+            const isNotExpired = Date.now() < data[i].expires_at.getTime();
+            if (isNotExpired) {
+                if (isValidRefreshToken) {
+                    const newAccessToken = jwt.sign({userID}, process.env.JWT_SECRET!, { expiresIn: ACCESS_TOKEN_EXPIRY });
+                    const newRefreshToken = crypto.randomBytes(40).toString('hex');
+                    const newRefreshTokenHash = await bcrypt.hash(newRefreshToken, 10);
+                    const updateRefreshToken = 'UPDATE refresh_tokens SET token_hash=$1, expires_at=$2 WHERE user_id=$3 AND id=$4;';
+                    try {
+                        await pool.query(updateRefreshToken, [newRefreshTokenHash, getRefreshTokenExpiry(), userID, sessionID]);
+                        return res.status(201).json({
+                            userID: userID,
+                            accessToken: newAccessToken,
+                            refreshToken: newRefreshToken
+                        })
+                    } catch {
+                        return res.status(500).json({ err: 'Refresh token overwritting failed' });
+                    }
+                }
+            }
+        }
+        return res.status(401).json({ err: 'Invalid or expired refresh token' });
+    } catch (err) {
+        console.error(err)
+        return res.status(500).json({ err: 'Server is facing issues, please try again later' });
+    }
+}
