@@ -1,40 +1,55 @@
-import pool from "../../db/pool.js";
-import type { Request, Response } from "express";
-import { getRefreshTokenExpiry } from "../../Configs/auth-configs.js";
-import { createToken } from "../../util.js";
 import type { AuthResponse } from "../../response-formats/auth-format.js";
-
+import type { Request, Response } from "express";
+import { insertRefreshToken } from "../util-functions.js";
+import { createToken } from "../util-functions.js";
+import pool from "../../db/pool.js";
+import bcrypt from 'bcrypt'
 
 export default async function login(req: Request, res: Response) {
     let { identifier, password } = req.body;
-    identifier = identifier.trim();
-    password = password.trim();
     if (!identifier || !password) return res.status(400).json({ err: 'Identifier or password not provided : provide either email or username as identifier and a valid password' });
+    password = password.trim();
+    identifier = identifier.trim();
 
+    // * this is not a un-necessary code it exists to check if the feilds are indirectly null 
+    // if given undefined the first check runs if given something like "    " after the trim its "" which is undefined
+    if (!identifier || !password) return res.status(400).json({ err: 'Identifier or password not provided : provide either email or username as identifier and a valid password' });
     const poolClient = await pool.connect();
     try {
-        await poolClient.query('BEGIN;')
+
         const resData = await poolClient.query('SELECT id,username,email,password_hash FROM users WHERE (username=$1 OR email=$1);', [identifier]);
         const userInfo = resData.rows[0];
-        if (!userInfo) return res.status(404).json({ err: 'Wrong identifier or password : identifier can be either email or username' });
+        if (!userInfo) {
+            return res.status(404).json({ err: 'Wrong password or identifier : identifier can be either email or username' });
+        }
+
+        const isValidPassword = await bcrypt.compare(password, userInfo.password_hash);
+        if (!isValidPassword) {
+            return res.status(404).json({ err: 'Wrong password or identifier : identifier can be either email or username' });
+        }
+
+        await poolClient.query('BEGIN;');
         const { accessToken, refreshToken, refreshTokenHash } = await createToken(userInfo.id);
-        await poolClient.query('DELETE FROM refresh_tokens where user_id=$1;', [userInfo.id]);
-        await poolClient.query('INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3);', [userInfo.id, refreshTokenHash, getRefreshTokenExpiry()]);
+        // ! Reminder set up either an cron or route to clear previous expired sessions
+        // await poolClient.query('DELETE FROM refresh_tokens where user_id=$1;', [userInfo.id]);
+        const sessionId = await insertRefreshToken(poolClient, userInfo.id, refreshTokenHash);
 
         const resObj: AuthResponse = {
             userId: userInfo.id,
             username: userInfo.username,
             email: userInfo.email,
             accessToken: accessToken,
-            refreshToken: refreshToken
+            refreshToken: refreshToken,
+            sessionId: sessionId
         }
 
-        res.status(201).json({ res: resObj });
         await poolClient.query('COMMIT;');
+        return res.status(200).json({ res: resObj });
 
     } catch (err) {
-        poolClient.query('ROLLBACK;')
-        return res.status(500).json({ err: 'Server error, please try again later' });
+        console.error(err);
+        await poolClient.query('ROLLBACK;');
+        return res.status(500).json({ err: 'Server error, please try again later', debug: err instanceof Error ? err.message : String(err) });
     } finally {
         poolClient.release();
     }

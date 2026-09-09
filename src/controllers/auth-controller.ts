@@ -8,6 +8,8 @@ import type { UserTokens } from "../models/Types/UsersTypes.js";
 import { ACCESS_TOKEN_EXPIRY, getRefreshTokenExpiry } from "../Configs/auth-configs.js";
 
 
+// First attempt : does has some issues so instead of fixing this i wrote the whole thing to learn the syntax and it improved folder structure so why not
+/*
 export async function login(req: Request, res: Response) {
     const { identification, password } = req.body;
 
@@ -59,20 +61,9 @@ export async function login(req: Request, res: Response) {
     which it should be to ensure it makes no mistakes. but that aside this diffrence in ms can be used to kind of identify if user has an account or not
     
     only if their network is stable om both request i think because if it wasnt then the diffrence might get masked by network delays
-    */
 }
 
-/*
-* TODO 
-! Get the refreshToken of user in header
-! querry the db looking for all sessions that has user_id matching the one sent over from frontend
-! match if atleast 1 of their session has the recovery key that user sent
-! make a new access token with expiry 
-! make a new refreshToken send the raw tokens to user while hash the tokens to store in db
-! update the refreshToken in table with updated expiry date and new hashed refresh token
-
 */
-
 
 export async function refreshAccessToken(req: Request, res: Response) {
     const { userID, refreshToken } = req.body;
@@ -98,7 +89,7 @@ export async function refreshAccessToken(req: Request, res: Response) {
             const isNotExpired = Date.now() < data[i].expires_at.getTime();
             if (isNotExpired) {
                 if (isValidRefreshToken) {
-                    const newAccessToken = jwt.sign({userID}, process.env.JWT_SECRET!, { expiresIn: ACCESS_TOKEN_EXPIRY });
+                    const newAccessToken = jwt.sign({ userID }, process.env.JWT_SECRET!, { expiresIn: ACCESS_TOKEN_EXPIRY });
                     const newRefreshToken = crypto.randomBytes(40).toString('hex');
                     const newRefreshTokenHash = await bcrypt.hash(newRefreshToken, 10);
                     const updateRefreshToken = 'UPDATE refresh_tokens SET token_hash=$1, expires_at=$2 WHERE user_id=$3 AND id=$4;';

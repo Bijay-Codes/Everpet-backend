@@ -1,28 +1,40 @@
+import type { AuthResponse } from "../../response-formats/auth-format.js";
+import type { Request, Response } from "express";
+import type { PoolClient } from "pg";
+import { createToken } from "../util-functions.js";
+import { insertRefreshToken } from "../util-functions.js";
 import pool from "../../db/pool.js";
 import bcrypt from 'bcrypt';
-import type { PoolClient } from "pg";
-import type { Request, Response } from "express";
-import { getRefreshTokenExpiry } from "../../Configs/auth-configs.js";
-import type { AuthResponse } from "../../response-formats/auth-format.js";
-import { createToken } from "../../util.js";
-
-type SessionInfo = {
-    userId: string;
-    tokenHash: string;
-}
 
 
 export default async function register(req: Request, res: Response) {
     let { username, email, password } = req.body;
+
+    if (!username || !email || !password) return res.status(400).json(
+        {
+            err: 'Incomplte user infomation provided, required format: {username:string,email:string,password:string'
+        });
+
     username = username.trim();
     email = email.trim().toLowerCase();
     password = password.trim();
-    // Validation: missing data
-    if (!username || !email || !password) return res.status(400).json({ err: 'Incomplte user infomation provided, required format: {username:string,email:string,password:string' });
+
+    // Validation: missing data after trim because empty spaces can pass first check the second one is there to catch those
+    if (!username || !email || !password) return res.status(400).json(
+        {
+            err: 'Incomplte user infomation provided, required format: {username:string,email:string,password:string'
+        });
 
     // Validation: correct length
-    if (username.length > 30) return res.status(400).json({ err: 'The Username must be under 30 characters' });
-    if (email.length > 255) return res.status(400).json({ err: 'The email must be under 255 characters' });
+    if (username.length > 30) return res.status(400).json(
+        {
+            err: 'The Username must be under 30 characters'
+        });
+    if (email.length > 255) return res.status(400).json(
+        {
+            err: 'The email must be under 255 characters'
+        }
+    );
 
     // Validation duplicate data
     const existing = await pool.query(
@@ -34,35 +46,35 @@ export default async function register(req: Request, res: Response) {
         return res.status(409).json({ err: 'An account with these details may already exist' });
     }
 
-    const insertClient = await pool.connect();
+    const poolClient = await pool.connect();
     try {
-        await insertClient.query('BEGIN;');
+        await poolClient.query('BEGIN;');
 
         const passwordHashed = await bcrypt.hash(password, 10);
-        const userInfo = await insertUser(insertClient, passwordHashed, username, email);
+        const userInfo = await insertUser(poolClient, passwordHashed, username, email);
 
         const { accessToken, refreshToken, refreshTokenHash } = await createToken(userInfo.id);
 
-        const sessionInfo = { userId: userInfo.id, tokenHash: refreshTokenHash, }
 
-        await insertRefreshToken(insertClient, sessionInfo);
+        const sessionId = await insertRefreshToken(poolClient, userInfo.id, refreshTokenHash);
 
         const resObj: AuthResponse = {
             userId: userInfo.id,
             username: userInfo.username,
             email: userInfo.email,
             accessToken: accessToken,
-            refreshToken: refreshToken
+            refreshToken: refreshToken,
+            sessionId: sessionId
         };
-        await insertClient.query('COMMIT;');
+        await poolClient.query('COMMIT;');
         return res.status(201).json({ res: resObj });
 
     } catch (err) {
-        await insertClient.query('ROLLBACK;');
+        await poolClient.query('ROLLBACK;');
         // console.error(err);
         return res.status(500).json({ err: 'Something went wrong try again later' });
     } finally {
-        insertClient.release();
+        poolClient.release();
     }
 }
 
@@ -73,11 +85,6 @@ async function insertUser(insertClient: PoolClient, passwordHashed: string, user
     return data.rows[0];
 }
 
-async function insertRefreshToken(insertClient: PoolClient, sessionInfo: SessionInfo) {
-    await insertClient.query('INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3);',
-        [sessionInfo.userId, sessionInfo.tokenHash, getRefreshTokenExpiry()]
-    );
-}
 
 /*
 
