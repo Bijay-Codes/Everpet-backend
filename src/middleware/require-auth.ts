@@ -34,5 +34,4 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
         return res.status(401).json({ err: 'Invalid or expired token' });
     }
 }
-// this is a checking middleware that checks if the user can access the routes or not,
-// if they cant then we return an error, if it does
+// this is a checking middleware that checks if the user can access the routes or not

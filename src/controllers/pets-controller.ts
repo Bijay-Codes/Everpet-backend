@@ -6,19 +6,6 @@ import { createNewPet } from "../models/Pets.js";
 import { isValidInitialData } from "../util.js";
 import API_CONFIG from '../Configs/api-config.js'
 
-export async function getAll(req: Request, res: Response) {
-    try {
-        const petInfo = await pool.query('SELECT * FROM pets');
-        const allPetData = petInfo.rows
-        return res.status(200).json({
-            totalPets: petInfo.rowCount,
-            allPets: allPetData
-        })
-    } catch {
-        res.status(500).json({ err: 'Some error happened noob' })
-    }
-}
-
 export async function getMultipleUserPets(req: AuthRequest, res: Response) {
     const { userID } = req;
     const { startID, limit } = req.params;

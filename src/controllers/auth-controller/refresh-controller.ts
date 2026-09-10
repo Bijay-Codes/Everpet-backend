@@ -6,7 +6,6 @@ import bcrypt from 'bcrypt';
 export default async function refresh(req: Request, res: Response) {
     let { sessionId, userId, refreshToken } = req.body;
     if (!sessionId || !userId || !refreshToken) return res.status(400).json({ err: 'Incomplete feilds provided required: userId,sessionId and refreshToken' });
-
     sessionId = sessionId.trim();
     userId = userId.trim();
     const previousRefreshToken = refreshToken.trim();
@@ -26,7 +25,7 @@ export default async function refresh(req: Request, res: Response) {
         }
 
         const isValidRefreshToken = await bcrypt.compare(previousRefreshToken, session.token_hash);
-        if (!isValidRefreshToken) return res.status(400).json({ err: 'The refreshToken provided seems to have been expired' });
+        if (!isValidRefreshToken) return res.status(401).json({ err: 'The refreshToken provided seems to have been expired' });
 
         const { accessToken, refreshToken, refreshTokenHash } = await createToken(userId);
         await pool.query('UPDATE refresh_tokens SET token_hash=$1 WHERE id=$2 AND user_id=$3', [refreshTokenHash, session.id, userId]);
@@ -40,6 +39,7 @@ export default async function refresh(req: Request, res: Response) {
         return res.status(200).json({ res: resObj });
 
     } catch (err) {
+        console.error(err);
         return res.status(500).json({ err: 'Something went wrong try again later' });
     }
 }
