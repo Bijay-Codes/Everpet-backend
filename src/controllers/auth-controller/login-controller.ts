@@ -69,7 +69,8 @@ Method:
 it should be a post method
 
 Things it must do well... 
-1. Get the users details like username, email and password from request body / frontend or direct api request
+1. Get the users details like username OR email and password.
+username or email treated as identifier  from request body / frontend or direct api request
 
 Substeps:
 

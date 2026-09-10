@@ -1,15 +1,6 @@
-import pool from "../db/pool.js";
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import crypto from 'node:crypto';
-import type { Request, Response } from "express";
-import type { UserTokens } from "../models/Types/UsersTypes.js";
-
-import { ACCESS_TOKEN_EXPIRY, getRefreshTokenExpiry } from "../Configs/auth-configs.js";
-
 
 // First attempt : does has some issues so instead of fixing this i wrote the whole thing to learn the syntax and it improved folder structure so why not
-/*
+
 export async function login(req: Request, res: Response) {
     const { identification, password } = req.body;
 
@@ -23,7 +14,7 @@ export async function login(req: Request, res: Response) {
         const isValidPassword = await bcrypt.compare(password, userInfo.password_hash);
         if (!isValidPassword) return res.status(401).json({ err: 'Wrong login credentials please try again' });
         const accessToken = jwt.sign(
-            { userID: userInfo.id },
+            { userId: userInfo.id },
             process.env.JWT_SECRET!,
             { expiresIn: ACCESS_TOKEN_EXPIRY }
         );
@@ -47,7 +38,7 @@ export async function login(req: Request, res: Response) {
         res.status(500).json({ err: 'Sever internal error, try again later' });
     }
 
-    /* im aware that i should never send descriptive status code and error messages for security and privacy puposes
+     im aware that i should never send descriptive status code and error messages for security and privacy puposes
      but i think it is fine for this scale as there are no users that are even using it in this early scale
      for example we can delibrately send same error message and status code for both user not exist and user password invalid to maintain privacy
      while a general catch is necessary so that we know when the api request itself got crashed or sever is facing some issue
@@ -59,22 +50,21 @@ export async function login(req: Request, res: Response) {
     because people can still notice the diffrence between response time of API for example since we return early if there is no data or user
     in database but if they exist we compare that database users password with entered password which is slow to do because of bcrypt.compare
     which it should be to ensure it makes no mistakes. but that aside this diffrence in ms can be used to kind of identify if user has an account or not
-    
+
     only if their network is stable om both request i think because if it wasnt then the diffrence might get masked by network delays
 }
 
-*/
 
 export async function refreshAccessToken(req: Request, res: Response) {
-    const { userID, refreshToken } = req.body;
-    if (!userID) {
+    const { sessionId, userId, refreshToken } = req.body;
+    if (!userId) {
         return res.status(401).json({ err: 'No user id provided in request body' });
     } else if (!refreshToken) {
         return res.status(401).json({ err: 'No refresh token provided in request body' });
     }
-    const query = 'SELECT * FROM refresh_tokens WHERE user_id=$1;';
+    const query = 'SELECT * FROM refresh_tokens WHERE user_id=$1 AND id=$2;';
     try {
-        const querryResponse = await pool.query(query, [userID]);
+        const querryResponse = await pool.query(query, [userId, sessionId]);
         const data = querryResponse.rows;
         if (data.length <= 0) {
             return res.status(400).json({ err: 'No session found for the said user' });
@@ -89,14 +79,14 @@ export async function refreshAccessToken(req: Request, res: Response) {
             const isNotExpired = Date.now() < data[i].expires_at.getTime();
             if (isNotExpired) {
                 if (isValidRefreshToken) {
-                    const newAccessToken = jwt.sign({ userID }, process.env.JWT_SECRET!, { expiresIn: ACCESS_TOKEN_EXPIRY });
+                    const newAccessToken = jwt.sign({ userId }, process.env.JWT_SECRET!, { expiresIn: ACCESS_TOKEN_EXPIRY });
                     const newRefreshToken = crypto.randomBytes(40).toString('hex');
                     const newRefreshTokenHash = await bcrypt.hash(newRefreshToken, 10);
                     const updateRefreshToken = 'UPDATE refresh_tokens SET token_hash=$1, expires_at=$2 WHERE user_id=$3 AND id=$4;';
                     try {
-                        await pool.query(updateRefreshToken, [newRefreshTokenHash, getRefreshTokenExpiry(), userID, sessionID]);
+                        await pool.query(updateRefreshToken, [newRefreshTokenHash, getRefreshTokenExpiry(), userId, sessionID]);
                         return res.status(201).json({
-                            userID: userID,
+                            userId: userId,
                             accessToken: newAccessToken,
                             refreshToken: newRefreshToken
                         })
