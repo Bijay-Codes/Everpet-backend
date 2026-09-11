@@ -10,6 +10,7 @@ export class Pet {
     state: PetData['state'];
     stats: PetData['stats'];
     lastTickedAt: Date;
+    gotTicked: boolean;
     constructor(petInfo: PetData) {
         this.currentOwnerID = petInfo.ownerID;
         this.name = petInfo.name;
@@ -17,6 +18,7 @@ export class Pet {
         this.state = petInfo.state;
         this.stats = petInfo.stats;
         this.lastTickedAt = new Date();
+        this.gotTicked = true;
     }
 
 
@@ -134,7 +136,12 @@ export class Pet {
     }
     applyTick() {
         if (this.isDead()) return;
+        // if (Date.now() - (new Date(this.lastTickedAt).getDate()) > 2 * 60 * 60 * 1000) return
         const ticksSinceLastCheck = (Date.now() - this.lastTickedAt.getTime()) / STAT_CONFIG.TICK_INTERVAL_MS;
+        if (ticksSinceLastCheck < 1) {
+            this.gotTicked = false;
+            return;
+        }
         const flooredTicks = Math.floor(ticksSinceLastCheck);
         const { BASE_HP_DRAIN_PER_TICK,
             TICK_INTERVAL_MS,
@@ -183,6 +190,18 @@ export class Pet {
                 this.killPet('Old age');
             }
         }
+    }
+
+    getFormat() {
+        const petinfo: PetData = {
+            ownerID: this.currentOwnerID,
+            name: this.name,
+            char: this.char,
+            state: this.state,
+            stats: this.stats,
+            lastTickedAt: this.lastTickedAt
+        }
+        return petinfo;
     }
 }
 

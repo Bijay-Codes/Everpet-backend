@@ -22,3 +22,25 @@ export async function createToken(userId: string) {
         refreshTokenHash: refreshTokenHash
     };
 }
+
+export function formatAsRows(data: object) {
+    const allKeys = Object.keys(data);
+    const allValues = Object.values(data);
+    let formatedRows = allKeys.join(', ');
+    let formatedValues = allValues.join(', ')
+
+    return {
+        formatedRows: formatedRows,
+        formatedValues: formatedValues
+    }
+}
+export function isValidInitialData(petData: { name: string, age: number, species: string }) {
+    if (petData.name && petData.name.length <= 40) {
+        if (petData.species) {
+            return true;
+        }
+    } else {
+        return false;
+    }
+}
+

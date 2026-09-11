@@ -1,5 +1,4 @@
-// speciesConfig.js
-import type { Species, DietType } from "./Types/PetTypes.js";
+import type { DietType } from "./Types/PetTypes.js";
 export interface SpeciesConfig {
     lifespanYears: number;
     diet: DietType;

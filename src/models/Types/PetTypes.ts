@@ -6,6 +6,7 @@ export type InitialPetData = {
     name: string,
     species: Species,
 }
+
 export interface PetData {
     ownerID: number | null;
     name: string;
@@ -36,7 +37,7 @@ export interface PetData {
         daysUnderfed: number;
         sicknessLiftAt: Date;
     };
-    lastTicked: Date;
+    lastTickedAt: Date;
 }
 
 export interface Food {
