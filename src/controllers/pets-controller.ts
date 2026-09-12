@@ -30,8 +30,7 @@ export async function getMultipleUserPets(req: AuthRequest, res: Response) {
 
         return res.status(200).json({ pets: petsToSend });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ err: 'something went wrong' });
+        res.status(500).json({ err: 'Something went wrong, please try again later' });
     }
 }
 
@@ -87,7 +86,7 @@ export async function getSingleUserPet(req: AuthRequest, res: Response) {
         return res.status(200).json({ res: formatedPet });
 
     } catch (err) {
-        return res.status(500).json({ err: 'Server facing an issue, try again later' });
+        return res.status(500).json({ err: 'Something went wrong, please try again later' });
     }
 }
 
@@ -119,7 +118,7 @@ export async function postPet(req: AuthRequest, res: Response) {
 
     } catch (err) {
         await poolClient.query('ROLLBACK;');
-        return res.status(401).json({ errMsg: 'Something went wrong, please try again', ERROR: err });
+        return res.status(401).json({ errMsg: 'Something went wrong, please try again later' });
     } finally {
         poolClient.release();
     }
@@ -139,6 +138,6 @@ export async function releasePet(req: AuthRequest, res: Response) {
         await poolClient.query('COMMIT;');
         return res.status(200).json({ res: 'ok' });
     } catch (err) {
-        console.error(err)
+        return res.status(500).json({ err: 'Something went wrong, please try again later' });
     }
 }

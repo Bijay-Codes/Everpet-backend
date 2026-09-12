@@ -71,7 +71,6 @@ export default async function register(req: Request, res: Response) {
 
     } catch (err) {
         await poolClient.query('ROLLBACK;');
-        // console.error(err);
         return res.status(500).json({ err: 'Something went wrong try again later' });
     } finally {
         poolClient.release();

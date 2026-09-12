@@ -39,7 +39,6 @@ export default async function refresh(req: Request, res: Response) {
         return res.status(200).json({ res: resObj });
 
     } catch (err) {
-        console.error(err);
         return res.status(500).json({ err: 'Something went wrong try again later' });
     }
 }

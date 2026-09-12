@@ -47,7 +47,6 @@ export default async function login(req: Request, res: Response) {
         return res.status(200).json({ res: resObj });
 
     } catch (err) {
-        console.error(err);
         await poolClient.query('ROLLBACK;');
         return res.status(500).json({ err: 'Server error, please try again later', debug: err instanceof Error ? err.message : String(err) });
     } finally {
