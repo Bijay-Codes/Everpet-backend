@@ -44,3 +44,50 @@ export function isValidInitialData(petData: { name: string, age: number, species
     }
 }
 
+export function isNullorUndefined(...args: string[]) {
+    return args.some(arg => {
+        if (!arg || arg === undefined || arg === null) return true;
+        if (typeof arg !== 'string') return true;
+        const trimmed = arg.trim();
+        if (trimmed === '') return true;
+    })
+}
+
+
+
+
+export function useCSRF() {
+    return {
+        createCSRFToken() {
+            const random = crypto.randomBytes(32).toString('hex');
+            const CSRF_TOKEN =
+                crypto.createHmac('sha256', process.env.JWT_SECRET!) // load a special formula and a code to encode the data/string
+                    .update(random) // insert the data to start creation
+                    .digest('hex');// convert back to hex string for usage
+            return `${random}.${CSRF_TOKEN}`;
+        },
+        validateCSRFToken(CSRF_TOKEN: string) {
+            if (!CSRF_TOKEN || typeof CSRF_TOKEN !== 'string') return false;
+            const separated = CSRF_TOKEN.split('.');
+            if (separated.length !== 2) return false
+            const [random, signature] = separated;
+            if (!random || !signature) return false;// just because typescript doesnt trust/read the below function this line had to be added
+            if (isNullorUndefined(random, signature)) return false;
+
+            const expectedSignature = crypto.createHmac('sha256', process.env.JWT_SECRET!).
+                update(random).
+                digest('hex');
+            if (signature.length !== expectedSignature.length) return false;
+            // This resolves in equal time in case the both signatures arent equal character
+            /*
+             WHY? its important to make the test keep running even if the early values dont match
+             so the response returns in same time preventing the guessmethod like guessing one character
+             if its right then the response returned in time is diffrent from when returned if guess didnt land
+             although its unlikely this happens im putting it in just for security
+            */
+            return crypto.timingSafeEqual(// compares both the strings/signatures
+                Buffer.from(signature), Buffer.from(expectedSignature) // converts back to bytes
+            )
+        }
+    }
+}

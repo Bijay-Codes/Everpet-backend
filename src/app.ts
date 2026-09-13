@@ -4,41 +4,20 @@ import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth-routes.js';
 import petRoutes from './routes/pets-routes.js';
-import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import cookieParser from "cookie-parser";
+import { requireOrigin } from './middleware/require-origin.js';
+import { globalLimiter } from './middleware/rate-limiters.js';
 
 const everpet = express();// initializing
 
+everpet.use(cookieParser());
 everpet.set('trust proxy', 1);
 everpet.use(helmet());
 
-// Limiteres __ Throttling behavior 
-export const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5,
-    message: { err: 'Too many attempts, please try again later' },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-export const refreshLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 30,
-    message: { err: 'Too many requests, please try again later' },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-const globalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 300, // !generous — NOT FIXED I WILL CHANGE LATER
-    message: { err: 'Too many requests, please try again later' },
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
+// Limiter__ Throttling behavior 
 everpet.use(globalLimiter);
-
+everpet.use(requireOrigin);
 if (!process.env.FRONTEND_URL) {
     throw new Error('FRONTEND_URL environment variable is not set');
 }

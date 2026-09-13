@@ -1,7 +1,7 @@
 import type { AuthResponse } from "../../response-formats/auth-format.js";
 import type { Request, Response } from "express";
 import type { PoolClient } from "pg";
-import { createToken } from "../util-functions.js";
+import { createToken, isNullorUndefined } from "../util-functions.js";
 import { insertRefreshToken } from "../util-functions.js";
 import pool from "../../db/pool.js";
 import bcrypt from 'bcrypt';
@@ -10,21 +10,18 @@ import bcrypt from 'bcrypt';
 export default async function register(req: Request, res: Response) {
     let { username, email, password } = req.body;
 
-    if (!username || !email || !password) return res.status(400).json(
+    if (isNullorUndefined(username, email, password)) return res.status(400).json(
         {
             err: 'Incomplte user infomation provided, required format: {username:string,email:string,password:string'
         });
-
-    username = username.trim();
-    email = email.trim().toLowerCase();
-    password = password.trim();
-
-    // Validation: missing data after trim because empty spaces can pass first check the second one is there to catch those
-    if (!username || !email || !password) return res.status(400).json(
-        {
-            err: 'Incomplte user infomation provided, required format: {username:string,email:string,password:string'
-        });
-
+    try {
+        username = username.trim();
+        email = email.trim().toLowerCase();
+        password = password.trim();
+    } catch (err) {
+        console.error(err);
+        return res.status(400).send({ err: 'Malformed register data' });
+    }
     // Validation: correct length
     if (username.length > 30) return res.status(400).json(
         {
