@@ -39,7 +39,7 @@ describe('POST : auth/register', () => {
         const res2 = await everpetAgent.post('/auth/register').send(validRegisterPayload());
         expect(res2.status).toBe(409);
     });
-    test('Valid cookies get attached with correct attributes on register', async () => {
+    test('Valid cookies get attached with correct attributes on successfull register', async () => {
         const everpetAgent = request.agent(everpet);
         const newUser = await everpetAgent.post('/auth/register').send(validRegisterPayload());
 
@@ -104,7 +104,7 @@ describe('POST : auth/login', () => {
         expect(res.status).toBe(400);
         expect(res2.status).toBe(400);
     });
-    test('Valid cookies get attached with correct attributes on register', async () => {
+    test('Valid cookies get attached with correct attributes on successfull login', async () => {
         const everpetAgent = request.agent(everpet);
         const newUser = await everpetAgent.post('/auth/register').send(validRegisterPayload());
 
