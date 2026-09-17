@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import pool from "../../db/pool.js";
-import { createToken, isNullorUndefined, useCSRF } from "../util-functions.js";
+import { createToken, isNullorUndefined, sendCookies } from "../util-functions.js";
 import bcrypt from 'bcrypt';
 import { getRefreshTokenExpiry } from "../../Configs/auth-configs.js";
 
@@ -28,7 +28,6 @@ export default async function refresh(req: Request, res: Response) {
     oldRefreshToken = oldRefreshToken.trim();
 
     try {
-        const { createCSRFToken } = useCSRF();
         const userInfo = await pool.query('SELECT id FROM users WHERE id=$1;', [userId]);
         if (!userInfo.rows[0]) return res.status(401).json({ err: 'Create an account to access this route' });
 
@@ -48,24 +47,7 @@ export default async function refresh(req: Request, res: Response) {
         const newExpiryTime = getRefreshTokenExpiry();
         await pool.query('UPDATE refresh_tokens SET token_hash=$1, expires_at=$2 WHERE id=$3 AND user_id=$4;', [refreshTokenHash, newExpiryTime, session.id, userId]);
 
-        const csrfToken = createCSRFToken();
-        res.cookie('csrf-token', csrfToken, {
-            httpOnly: false,
-            secure: true,
-            sameSite: 'none',
-            path: '/auth/refresh'
-        });
-
-        res.cookie('refresh-session', JSON.stringify(
-            { refreshToken: refreshToken, sessionId: sessionId }),
-            {
-                httpOnly: true,
-                secure: true,
-                sameSite: 'none',
-                path: '/auth/refresh',
-                expires: newExpiryTime
-            });
-
+        sendCookies(res, sessionId, refreshToken);
         const resObj = {
             userId: userId,
             accessToken: accessToken,

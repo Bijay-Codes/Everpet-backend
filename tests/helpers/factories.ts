@@ -22,6 +22,18 @@ export function isAuthFormat(res: any) {
     expect(res.body.res).toHaveProperty('username');
     expect(res.body.res).toHaveProperty('email');
     expect(res.body.res).toHaveProperty('accessToken');
-    expect(res.body.res).toHaveProperty('refreshToken');
-    expect(res.body.res).toHaveProperty('sessionId');
+}
+
+export function getCookieObj(cookieHeader: string[] | string | undefined, name: string) {
+    if (!cookieHeader) return null;
+    const rawCookie = (Array.isArray(cookieHeader) ? cookieHeader : [cookieHeader])
+        .find(c => c.startsWith(`${name}=`));
+    if (!rawCookie) return undefined;
+    const separatedValuesCookie = rawCookie.split(';')[0];
+    if (!separatedValuesCookie) return undefined;
+    const strippedSign = separatedValuesCookie.slice(separatedValuesCookie.indexOf('=') + 1);
+    return {
+        parsedCookieValue: decodeURIComponent(strippedSign),
+        rawCookie: rawCookie
+    }
 }

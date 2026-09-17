@@ -8,8 +8,6 @@ const authRoutes = Router();
 
 authRoutes.post('/register', authLimiter, register);
 authRoutes.post('/login', authLimiter, login);
-authRoutes.post('/refresh', refreshLimiter, (req, res, next) => {
-  return requireCsrf(req as any, res, next);
-}, refresh);
+authRoutes.post('/refresh', refreshLimiter, requireCsrf, refresh);
 
 export default authRoutes;

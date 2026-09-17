@@ -1,7 +1,8 @@
 import type { AuthResponse } from "../../response-formats/auth-format.js";
 import type { Request, Response } from "express";
 import type { PoolClient } from "pg";
-import { createToken, isNullorUndefined } from "../util-functions.js";
+import { createToken, isNullorUndefined, sendCookies, useCSRF } from "../util-functions.js";
+import { getRefreshTokenExpiry } from "../../Configs/auth-configs.js";
 import { insertRefreshToken } from "../util-functions.js";
 import pool from "../../db/pool.js";
 import bcrypt from 'bcrypt';
@@ -59,11 +60,12 @@ export default async function register(req: Request, res: Response) {
             userId: userInfo.id,
             username: userInfo.username,
             email: userInfo.email,
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            sessionId: sessionId
+            accessToken: accessToken
         };
         await poolClient.query('COMMIT;');
+
+        sendCookies(res, sessionId, refreshToken);
+
         return res.status(201).json({ res: resObj });
 
     } catch (err) {

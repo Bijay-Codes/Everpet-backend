@@ -1,6 +1,6 @@
 import type { AuthResponse } from "../../response-formats/auth-format.js";
 import type { Request, Response } from "express";
-import { insertRefreshToken } from "../util-functions.js";
+import { insertRefreshToken, sendCookies } from "../util-functions.js";
 import { createToken } from "../util-functions.js";
 import pool from "../../db/pool.js";
 import bcrypt from 'bcrypt'
@@ -36,14 +36,15 @@ export default async function login(req: Request, res: Response) {
             userId: userInfo.id,
             username: userInfo.username,
             email: userInfo.email,
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            sessionId: sessionId
+            accessToken: accessToken
         };
 
         await poolClient.query('COMMIT;');
-        return res.status(200).json({ res: resObj });
+
+        sendCookies(res, sessionId, refreshToken);
+
         // ! Reminder set up either an cron or route to clear previous expired sessions
+        return res.status(200).json({ res: resObj });
 
     } catch (err) {
         await poolClient.query('ROLLBACK;');

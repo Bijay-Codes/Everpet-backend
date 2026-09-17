@@ -3,8 +3,6 @@ export interface AuthResponse {
     username: string;
     email: string;
     accessToken: string;
-    refreshToken: string;
-    sessionId: string;
 };
 export type UserInfo = {
     user_id: string;

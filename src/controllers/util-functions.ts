@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { ACCESS_TOKEN_EXPIRY, getRefreshTokenExpiry } from '../Configs/auth-configs.js';
 import type { PoolClient } from "pg";
-
+import type { Response } from 'express';
 export async function insertRefreshToken(insertClient: PoolClient, userId: string, tokenHash: string) {
     const sessionInfo = await insertClient.query('INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3) RETURNING id;',
         [userId, tokenHash, getRefreshTokenExpiry()]
@@ -34,10 +34,13 @@ export function formatAsRows(data: object) {
         formatedValues: formatedValues
     }
 }
+
 export function isValidInitialData(petData: { name: string, age: number, species: string }) {
     if (petData.name && petData.name.length <= 40) {
         if (petData.species) {
             return true;
+        } else {
+            return false
         }
     } else {
         return false;
@@ -90,4 +93,23 @@ export function useCSRF() {
             )
         }
     }
+}
+
+export function sendCookies(res: Response, sessionId: string, refreshToken: string) {
+    const { createCSRFToken } = useCSRF();
+    res.cookie('csrf-token', createCSRFToken(), {
+        httpOnly: false,
+        secure: true,
+        sameSite: 'none',
+        path: '/auth/refresh'
+    });
+    res.cookie('refresh-session',
+        JSON.stringify({ sessionId: sessionId, refreshToken: refreshToken }),
+        {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            expires: getRefreshTokenExpiry(),
+            path: '/auth/refresh'
+        })
 }
