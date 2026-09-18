@@ -1,6 +1,6 @@
 import everpet from "../../src/app.js";
 import { describe, test, expect } from "vitest";
-import request from 'supertest';
+import request, { agent } from 'supertest';
 
 
 import { getCookieObj, isAuthFormat, validLoginPayload, validRegisterPayload } from "../helpers/factories.js";
@@ -132,54 +132,4 @@ describe('POST : auth/login', () => {
         expect(refreshSessionCookie).toContain('Secure');
     }, 15000);
 })
-
-
-
-// describe('Post : auth/refresh', () => {
-
-//     test('Valid user can get a new access token and refresh token is updated as planned', async () => {
-//         const everpetAgent = request.agent(everpet);
-//         const newUser = await everpetAgent.post('/auth/register').send(validRegisterPayload());
-//         const { userId } = newUser.body.res;
-
-//         const csrfToken = everpetAgent.jar.getCookie('csrf-token', '/auth/refresh');
-//         const res = await everpetAgent.post('/auth/refresh').send({ userId });
-
-//         // expect(refreshToken).not.toBe(res.body.res.refreshToken);
-//         expect(res.status).toBe(200);
-//     }, 15000);
-
-
-//     test('Providing invalid data in request rejects the requests', async () => {
-//         const everpetAgent = request.agent(everpet);
-//         const res = await everpetAgent.post('/auth/refresh').send({ sessionId: '  ', userId: undefined, refreshToken: null });
-//         const res2 = await everpetAgent.post('/auth/refresh').send({ sessionId: ' Im not even logged in', userId: ' Idk my userid', refreshToken: '  ' });
-
-//         expect(res.status).toBe(400);
-//         expect(res2.status).toBe(400);
-//     });
-
-
-//     test('Providing invalid Refreshtoken in request rejects the requests', async () => {
-//         const everpetAgent = request.agent(everpet);
-//         const newUser = await everpetAgent.post('/auth/register').send(validRegisterPayload());
-//         const { userId, sessionId } = newUser.body.res;
-//         const res = await everpetAgent.post('/auth/refresh').send({ sessionId, userId, refreshToken: 'wrongone' });
-
-//         expect(res.status).toBe(401);
-//     });
-
-//     test('Refresh already used RefresToken cant be used anymore', async () => {
-//         const everpetAgent = request.agent(everpet);
-//         const newUser = await everpetAgent.post('/auth/register').send(validRegisterPayload());
-//         const { userId, sessionId, refreshToken } = newUser.body.res;
-//         const res1 = await everpetAgent.post('/auth/refresh').send({ sessionId, userId, refreshToken });
-
-//         const res2 = await everpetAgent.post('/auth/refresh').send({ sessionId, userId, refreshToken });
-//         expect(refreshToken).not.toBe(res1.body.res.refreshToken);
-//         expect(res1.status).toBe(200);
-//         expect(res2.status).toBe(401);
-//     }, 15000);
-
-// });
 

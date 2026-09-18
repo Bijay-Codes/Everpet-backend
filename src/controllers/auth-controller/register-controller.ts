@@ -1,8 +1,7 @@
 import type { AuthResponse } from "../../response-formats/auth-format.js";
 import type { Request, Response } from "express";
 import type { PoolClient } from "pg";
-import { createToken, isNullorUndefined, sendCookies, useCSRF } from "../util-functions.js";
-import { getRefreshTokenExpiry } from "../../Configs/auth-configs.js";
+import { createToken, isNullorUndefined, sendCookies } from "../util-functions.js";
 import { insertRefreshToken } from "../util-functions.js";
 import pool from "../../db/pool.js";
 import bcrypt from 'bcrypt';
@@ -20,7 +19,6 @@ export default async function register(req: Request, res: Response) {
         email = email.trim().toLowerCase();
         password = password.trim();
     } catch (err) {
-        console.error(err);
         return res.status(400).send({ err: 'Malformed register data' });
     }
     // Validation: correct length

@@ -3,15 +3,15 @@ import { useCSRF } from "../controllers/util-functions.js";
 
 export function requireCsrf(req: Request, res: Response, next: NextFunction) {
 
-    const csrfCookie = req.cookies['csrf-token'];
+    // const allCookies = req.cookies['set-cookie'];
+    const csrfCookie = req.cookies['csrf-token']
     const csrfHeader = req.headers["x-csrf-token"];
-
     if (!csrfCookie || !csrfHeader) {
-        return res.status(403).json({ error: "Missing CSRF token" });
+        return res.status(401).json({ error: "Missing CSRF token" });
     }
 
     if (csrfCookie !== csrfHeader) {
-        return res.status(403).json({ error: "CSRF tokens do not match" });
+        return res.status(402).json({ error: "CSRF tokens do not match" });
     }
 
     if (!useCSRF().validateCSRFToken(csrfCookie)) {

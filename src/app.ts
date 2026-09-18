@@ -26,8 +26,6 @@ everpet.use(cors({ origin: process.env.FRONTEND_URL })); // allows us to trust o
 
 everpet.use(express.json()); // all the request received are parsed already, for direct use from here - whereever this milddleware is called
 
-
-
 everpet.use('/auth', authRoutes);// login and signup
 
 everpet.use('/petstore', petRoutes);// all pet related routes

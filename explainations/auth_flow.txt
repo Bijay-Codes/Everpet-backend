@@ -1,0 +1,78 @@
+This file contains info about how is the authentication setup for this project / basically me self talking to myself
+
+By auth_flow i mean how the whole auth should work in detail such that if i forget or come back here after a long time i dont forget what the basic ideas and assumptions i have
+
+The Register_phase:
+In this phase the user is onboarding i wanted to reduce the friction as much as possible,
+So i am thinking of only taking email, username and password for the whole registration form if i want to make a profile page i can get those specific details with an diffrent form once they have registered.
+
+
+The Login_phase:
+
+In this scenario the user already has an account and now he wants to login,
+I thought what pain points I have when I login on a site the main thing that came to my mind was forgeting the email i have registered with-
+- and the password too ofcourse so to fix that UX issue i am taking either the email or the username as identifier for the request
+
+- The password reset gap:
+As for now when i'm writing it there has been no mailer configured making password resets undoable for now but it might have already been implemented if you are reading this from future (why are you even reading, go work).
+
+
+Refresh_token phase:
+In this phase the user already has an account and has logged in already but the access token we gave him got expired
+he can contact /auth/refresh (name can change for some reasons but the funcationality will be same).
+
+When the users hit refresh route they are already an user and have a valid login session so we have to find that session by their given session id and they must also provide their refresh token that should not have been (rotated) or expired.
+As of now the Session id and Refresh token gets automatically attached by browser on the post request to /auth/refresh. 
+After running the verification checks we provide them an diffrent refresh token and an new access token.
+
+
+The diffrent tokens provided and their goal:
+
+Access Token ( Not Attached to cookies | To be stored in memory by client using js ) :
+Purpose - To authenticate if the user sending the request to the server is an valid user or not. The access token is created using JWT_SECRET and the users own ID feild coming from database.
+Benifits - We can achieve an serverless authentication if we provide this token: Since the id is the actual AccessToken we can directly get the userid for necessary actions
+The Dangers / Tradeoffs ( Nothing is ever truly Free ) - We treat anyone holding an valid access token as an actual verified user but if the access token or the jwt secret gets leaked there will be a lot of trouble and security issues like anyone can access the users account and do modifications on behalf of the actual users, to mitigate that these tokens must be shortlived
+
+Where to get AccessToken? - Currently all the auth routes like /auth/login, /auth/register and /auth/refresh gives user an new Access token
+
+
+Refresh Token ( Attached to Cookies with an HTTPOnly attribute to avoid abuse in case of XSS ):
+Purpose - To identify the user and they have an session with us ( wether they are logged in ), since the access token are shortlived we need an long lived token that can be used to get a new access token in place of the expired one and that token is Refresh token
+The Dangers / Tradeoffs - This token must never be leaked because if it does the actual user can be locked from getting the access token, while the attacker can keep getting tokens pretending to be an user forever if no action is ever taken because these tokens are one time use only each requst to get new access token consumes the refreshtoken and provides a new one.
+The Double edge sword - IF the Refresh token gets leaked but at the same moment actual user tries /refesh that old one that got leaked is no more valid but if the attacker does the refresh first with the leaked token and when its valid then token the actual user is holding is now invalid.
+
+Precauctions taken - Given how troublesome the case is if the token gets leaked i have to make it even less likely for it to leak
+To avoid theft via XSS ( cross site scripting ) scenario i send the token on an HTTPOnly cookie making this token unreadable by any js wether its my own code or an malicious code running on my codebase pretending to be mine.
+To avoid csrf (Client side request forgery) where an malicious site rides the actual request and with the valid tokens attached by users browser the server checks origin of request if it comes from my own frontend url then let the request pass if not we return an unauthorized access status code.
+
+The issue - Since i dont have domain YET the following things are hosted at these platform
+The Backend - Render
+The Database - Neon
+The Frontend - Vercel
+
+Since the backend and frontend have diffrent domain url we cant use the samesite:strict attribute to the cookies being sent by browser which is why we are depending on origin check
+But its not really that dependable since i have no experince on if the origin can be altered in some way.
+To fix this specific case, i learnt by how others handle this case and what i got was they provide an non Http only cookie thats readable by js and require it to be attached to the request header for verification
+since the attacker can only read the non Http cookies of their own browser because of same origin policy he will only get his own cookies not the users cookie he cant attach the correct one to header, But by this addition now i have to make sure no XSS attacks happen.
+
+
+
+Csrf Token (Sent to user as Non Http only cookie so their js can read it and attach in header): 
+
+How its made? - its a random hex string generated by server and signed with signature to identify it was created by this server
+It is built by crypto.Hmac given the servers JWT_SECRET and the formula sha256 to ensure it is completely non guessable
+
+It has 2 parts :
+a. Random part - this one is a randombyte generated by crypto giving us a Hex string to use
+b. Signed part - this part is contains the signature specific to server using JWT and its JWT_SECRET 
+
+These 2 are then stiched together and gives as csrf token to send as cookie
+for more info visit src/controllers/util-functions.ts
+
+Purpose - to avoid csrf issues mentioned above
+Benifits / Tradeoffs - Makes the flow more secure when paired with origin check but breaks if Xss happens on site
+Precauctions - No dangerously set html rendered on clientside, the inputs must always be validated before storing in database, any user input data rendered by client should be tratead as a string not an additional code that can run.
+
+Where to get AccessToken? - it gets attached by server on valid register / login
+
+

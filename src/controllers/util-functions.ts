@@ -101,7 +101,7 @@ export function sendCookies(res: Response, sessionId: string, refreshToken: stri
         httpOnly: false,
         secure: true,
         sameSite: 'none',
-        path: '/auth/refresh'
+        path: '/auth'
     });
     res.cookie('refresh-session',
         JSON.stringify({ sessionId: sessionId, refreshToken: refreshToken }),
@@ -110,6 +110,6 @@ export function sendCookies(res: Response, sessionId: string, refreshToken: stri
             secure: true,
             sameSite: 'none',
             expires: getRefreshTokenExpiry(),
-            path: '/auth/refresh'
+            path: '/auth'
         })
 }

@@ -1,12 +1,19 @@
 import type { Request, Response } from "express";
 import pool from "../../db/pool.js";
-import { createToken, isNullorUndefined, sendCookies } from "../util-functions.js";
+import { createToken, isNullorUndefined, sendCookies, useCSRF } from "../util-functions.js";
 import bcrypt from 'bcrypt';
 import { getRefreshTokenExpiry } from "../../Configs/auth-configs.js";
 
 export default async function refresh(req: Request, res: Response) {
     let { userId } = req.body;
+    const csrfHeader = req.get('x-csrf-token');
+    const csrfCookie = req.cookies['csrf-token'];
 
+    const { validateCSRFToken } = useCSRF();
+
+    if (!csrfHeader) return res.status(400).json({ err: 'Csrf-token not provided' });
+    if (!validateCSRFToken(csrfHeader)) return res.status(401).json({ err: 'Csrf-token not issued by the server' });
+    if (csrfHeader !== csrfCookie) return res.status(402).json({ err: 'Csrf-token do not match' });
 
     const JsonCookies = req.cookies['refresh-session'];
     let sessionId: string = '';
@@ -56,9 +63,9 @@ export default async function refresh(req: Request, res: Response) {
 
         return res.status(200).json({ res: resObj });
     } catch (err) {
-        console.error(err)
-        return res.status(500).json({ err: 'Something went wrong try again later' });
+        return res.status(500).json({ err: 'Something went wrong try again later', debug: String(err) });
     }
+
 }
 
 
