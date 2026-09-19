@@ -1,10 +1,10 @@
-import type { AuthResponse } from "../../response-formats/auth-format.js";
+import type { ServerResponse } from "../../response-formats/auth-format.js";
 import type { Request, Response } from "express";
-import { insertRefreshToken, sendCookies } from "../util-functions.js";
+import { insertRefreshToken, sendCookies, sendErrorResponse, isNullorUndefined, useCsrf } from "../util-functions.js";
 import { createToken } from "../util-functions.js";
 import pool from "../../db/pool.js";
 import bcrypt from 'bcrypt'
-import { isNullorUndefined } from "../util-functions.js";
+
 export default async function login(req: Request, res: Response) {
     let { identifier, password } = req.body;
 
@@ -12,7 +12,7 @@ export default async function login(req: Request, res: Response) {
     if (isValid) return res.status(400).json({ err: 'Identifier or password not provided : provide either email or username as identifier and a valid password' });
     password = password.trim();
     identifier = identifier.trim();
-
+    const { createCsrfToken } = useCsrf();
     const poolClient = await pool.connect();
     try {
 
@@ -32,11 +32,15 @@ export default async function login(req: Request, res: Response) {
 
         const sessionId = await insertRefreshToken(poolClient, userInfo.id, refreshTokenHash);
 
-        const resObj: AuthResponse = {
-            userId: userInfo.id,
-            username: userInfo.username,
-            email: userInfo.email,
-            accessToken: accessToken
+        const resObj: ServerResponse = {
+            isSuccess: true,
+            data: {
+                userId: userInfo.id,
+                username: userInfo.username,
+                email: userInfo.email,
+                accessToken: accessToken,
+                csrfToken: createCsrfToken(sessionId)
+            }
         };
 
         await poolClient.query('COMMIT;');
@@ -48,7 +52,7 @@ export default async function login(req: Request, res: Response) {
 
     } catch (err) {
         await poolClient.query('ROLLBACK;');
-        return res.status(500).json({ err: 'Server error, please try again later', debug: err instanceof Error ? err.message : String(err) });
+        return sendErrorResponse(res);
     } finally {
         poolClient.release();
     }
@@ -115,8 +119,8 @@ Response:
 userID: ...
 username: ...
 email: ...
-accessToken: ...
 refreshToken: ...
+accessToken: ...
 }
 ! Tokens attached separately when sending response
 

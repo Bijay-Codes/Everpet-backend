@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import { ACCESS_TOKEN_EXPIRY, getRefreshTokenExpiry } from '../Configs/auth-configs.js';
 import type { PoolClient } from "pg";
 import type { Response } from 'express';
+import type { ServerResponse } from '../response-formats/auth-format.js';
 export async function insertRefreshToken(insertClient: PoolClient, userId: string, tokenHash: string) {
     const sessionInfo = await insertClient.query('INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3) RETURNING id;',
         [userId, tokenHash, getRefreshTokenExpiry()]
@@ -56,53 +57,28 @@ export function isNullorUndefined(...args: string[]) {
     })
 }
 
-
-
-
-export function useCSRF() {
+export function useCsrf() {
     return {
-        createCSRFToken() {
-            const random = crypto.randomBytes(32).toString('hex');
-            const CSRF_TOKEN =
-                crypto.createHmac('sha256', process.env.JWT_SECRET!) // load a special formula and a code to encode the data/string
-                    .update(random) // insert the data to start creation
-                    .digest('hex');// convert back to hex string for usage
-            return `${random}.${CSRF_TOKEN}`;
+        createCsrfToken(sessionId: string) {
+            return crypto.createHmac('sha256', process.env.CSRF_SECRET!).update(sessionId).digest('hex');
         },
-        validateCSRFToken(CSRF_TOKEN: string) {
-            if (!CSRF_TOKEN || typeof CSRF_TOKEN !== 'string') return false;
-            const separated = CSRF_TOKEN.split('.');
-            if (separated.length !== 2) return false
-            const [random, signature] = separated;
-            if (!random || !signature) return false;// just because typescript doesnt trust/read the below function this line had to be added
-            if (isNullorUndefined(random, signature)) return false;
+        validateCsrfToken(sessionId: string, csrfToken: string) {
+            if (typeof sessionId !== 'string' || typeof csrfToken !== 'string') return false;
 
-            const expectedSignature = crypto.createHmac('sha256', process.env.JWT_SECRET!).
-                update(random).
-                digest('hex');
-            if (signature.length !== expectedSignature.length) return false;
-            // This resolves in equal time in case the both signatures arent equal character
-            /*
-             WHY? its important to make the test keep running even if the early values dont match
-             so the response returns in same time preventing the guessmethod like guessing one character
-             if its right then the response returned in time is diffrent from when returned if guess didnt land
-             although its unlikely this happens im putting it in just for security
-            */
-            return crypto.timingSafeEqual(// compares both the strings/signatures
-                Buffer.from(signature), Buffer.from(expectedSignature) // converts back to bytes
-            )
+            const newTokenForValidation =
+                crypto.createHmac('sha256', process.env.CSRF_SECRET!)
+                    .update(sessionId)
+                    .digest('hex');
+            const givenToken = Buffer.from(csrfToken);
+            const expectedToken = Buffer.from(newTokenForValidation);
+            if (expectedToken.length !== givenToken.length) return false;
+            return crypto.timingSafeEqual(givenToken, expectedToken);
         }
     }
 }
 
+
 export function sendCookies(res: Response, sessionId: string, refreshToken: string) {
-    const { createCSRFToken } = useCSRF();
-    res.cookie('csrf-token', createCSRFToken(), {
-        httpOnly: false,
-        secure: true,
-        sameSite: 'none',
-        path: '/auth'
-    });
     res.cookie('refresh-session',
         JSON.stringify({ sessionId: sessionId, refreshToken: refreshToken }),
         {
@@ -112,4 +88,17 @@ export function sendCookies(res: Response, sessionId: string, refreshToken: stri
             expires: getRefreshTokenExpiry(),
             path: '/auth'
         })
+}
+
+export function sendErrorResponse(res: Response, status: number = 500, message: string = 'Server error', details: object | string = 'Something went wrong, please try again later') {
+    const resObj: ServerResponse = {
+        isSuccess: false,
+        data: null,
+        err: {
+            message: message,
+            code: status,
+            details: details
+        }
+    }
+    return res.status(status).json({ resObj });
 }

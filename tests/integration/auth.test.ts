@@ -14,6 +14,7 @@ describe('POST : auth/register', () => {
     test('Valid registeration returns 201 and data in correct format', async () => {
         const everpetAgent = request.agent(everpet);
         const res = await everpetAgent.post('/auth/register').send(validRegisterPayload());
+        console.log(res.body)
         expect(res.status).toBe(201);
         isAuthFormat(res);
     });
@@ -43,22 +44,13 @@ describe('POST : auth/register', () => {
         const everpetAgent = request.agent(everpet);
         const newUser = await everpetAgent.post('/auth/register').send(validRegisterPayload());
 
-
-        const csrfCookie = getCookieObj(newUser.headers['set-cookie'], 'csrf-token')?.rawCookie;
         const refreshSessionCookieObj = getCookieObj(newUser.headers['set-cookie'], 'refresh-session');
-
         expect(refreshSessionCookieObj).toBeDefined();
 
 
         const { parsedCookieValue, rawCookie } = refreshSessionCookieObj!;
         const refreshSessionCookie = rawCookie;
         expect(() => { JSON.parse(parsedCookieValue); }).not.toThrow();
-
-
-        expect(csrfCookie).toBeDefined();
-        expect(csrfCookie).not.toContain('HttpOnly');
-        expect(csrfCookie).toContain('Path');
-        expect(csrfCookie).toContain('Secure');
 
         expect(refreshSessionCookie).toBeDefined();
         expect(refreshSessionCookie).toContain('HttpOnly');
@@ -108,22 +100,13 @@ describe('POST : auth/login', () => {
         const everpetAgent = request.agent(everpet);
         const newUser = await everpetAgent.post('/auth/register').send(validRegisterPayload());
 
-
-        const csrfCookie = getCookieObj(newUser.headers['set-cookie'], 'csrf-token')?.rawCookie;
         const refreshSessionCookieObj = getCookieObj(newUser.headers['set-cookie'], 'refresh-session');
-
         expect(refreshSessionCookieObj).toBeDefined();
 
 
         const { parsedCookieValue, rawCookie } = refreshSessionCookieObj!;
         const refreshSessionCookie = rawCookie;
         expect(() => { JSON.parse(parsedCookieValue); }).not.toThrow();
-
-
-        expect(csrfCookie).toBeDefined();
-        expect(csrfCookie).not.toContain('HttpOnly');
-        expect(csrfCookie).toContain('Path');
-        expect(csrfCookie).toContain('Secure');
 
         expect(refreshSessionCookie).toBeDefined();
         expect(refreshSessionCookie).toContain('HttpOnly');

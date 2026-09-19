@@ -1,13 +1,14 @@
-import type { AuthResponse } from "../../response-formats/auth-format.js";
+import type { ServerResponse } from "../../response-formats/auth-format.js";
 import type { Request, Response } from "express";
 import type { PoolClient } from "pg";
-import { createToken, isNullorUndefined, sendCookies } from "../util-functions.js";
+import { createToken, isNullorUndefined, sendCookies, sendErrorResponse, useCsrf } from "../util-functions.js";
 import { insertRefreshToken } from "../util-functions.js";
 import pool from "../../db/pool.js";
 import bcrypt from 'bcrypt';
 
 
 export default async function register(req: Request, res: Response) {
+    const { createCsrfToken } = useCsrf();
     let { username, email, password } = req.body;
 
     if (isNullorUndefined(username, email, password)) return res.status(400).json(
@@ -51,24 +52,26 @@ export default async function register(req: Request, res: Response) {
 
         const { accessToken, refreshToken, refreshTokenHash } = await createToken(userInfo.id);
 
-
         const sessionId = await insertRefreshToken(poolClient, userInfo.id, refreshTokenHash);
 
-        const resObj: AuthResponse = {
-            userId: userInfo.id,
-            username: userInfo.username,
-            email: userInfo.email,
-            accessToken: accessToken
+        const resObj: ServerResponse = {
+            isSuccess: true,
+            data: {
+                userId: userInfo.id,
+                username: userInfo.username,
+                email: userInfo.email,
+                accessToken: accessToken,
+                csrfToken: createCsrfToken(sessionId)
+            }
         };
         await poolClient.query('COMMIT;');
 
         sendCookies(res, sessionId, refreshToken);
-
         return res.status(201).json({ res: resObj });
 
     } catch (err) {
         await poolClient.query('ROLLBACK;');
-        return res.status(500).json({ err: 'Something went wrong try again later' });
+        return sendErrorResponse(res);
     } finally {
         poolClient.release();
     }

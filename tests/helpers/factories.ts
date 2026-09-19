@@ -18,10 +18,13 @@ export function validLoginPayload(overrides = {}) {
 }
 
 export function isAuthFormat(res: any) {
-    expect(res.body.res).toHaveProperty('userId');
-    expect(res.body.res).toHaveProperty('username');
-    expect(res.body.res).toHaveProperty('email');
-    expect(res.body.res).toHaveProperty('accessToken');
+
+    expect(res.body.res.isSuccess).toBeTruthy();
+    expect(res.body.res.data).toHaveProperty('userId');
+    expect(res.body.res.data).toHaveProperty('username');
+    expect(res.body.res.data).toHaveProperty('email');
+    expect(res.body.res.data).toHaveProperty('accessToken');
+    expect(res.body.res.data).toHaveProperty('csrfToken');
 }
 
 export function getCookieObj(cookieHeader: string[] | string | undefined, name: string) {

@@ -8,13 +8,13 @@ export interface AuthRequest extends Request {
     userID?: string;
 };
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
-    const header = req.headers.authorization;
+    const authHeader = req.headers.authorization;
     let accessToken: string | undefined;
     // ensure header is a string before using string methods so TypeScript can narrow the type
-    if (!header?.includes('Bearer')) {
+    if (!authHeader?.includes('Bearer')) {
         return res.status(401).send('No acess token provided in header');
     } else {
-        accessToken = header.split(' ')[1];
+        accessToken = authHeader.split(' ')[1];
     }
     if (!accessToken) return res.status(401).send('Malformed authorizatioon header');
     //  we needed to verify that access token is a string at two places because the jwt.decode only accepts string as prarmeter
