@@ -81,7 +81,7 @@ export function useCsrf() {
 export function sendCookies(res: Response, sessionId: string, refreshToken: string, userId: string) {
     const isTest = process.env.NODE_ENV === 'test'
     res.cookie('refresh-session',
-        JSON.stringify({ sessionId: sessionId, refreshToken: refreshToken }),
+        JSON.stringify({ sessionId: sessionId, userId: userId, refreshToken: refreshToken }),
         {
             httpOnly: true,
             secure: !isTest,

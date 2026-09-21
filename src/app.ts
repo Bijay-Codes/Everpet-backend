@@ -16,7 +16,6 @@ const everpet = express();// initializing
 everpet.set('trust proxy', 1);
 everpet.use(helmet());
 everpet.use(cors({ origin: process.env.FRONTEND_URL, credentials: true })); // allows us to trust our frontend url so we can connect to it only no one else can connect
-
 everpet.use(globalLimiter);// Limiter__ Throttling behavior 
 everpet.use(requireOrigin);
 

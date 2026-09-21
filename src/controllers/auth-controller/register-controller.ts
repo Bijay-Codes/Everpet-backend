@@ -8,7 +8,6 @@ import bcrypt from 'bcrypt';
 
 
 export default async function register(req: Request, res: Response) {
-    console.log(req.body);
     const { createCsrfToken } = useCsrf();
     let { username, email, password } = req.body;
 
@@ -21,18 +20,23 @@ export default async function register(req: Request, res: Response) {
         email = email.trim().toLowerCase();
         password = password.trim();
     } catch (err) {
-        return res.status(400).send({ err: 'Malformed register data' });
+        return sendErrorResponse(res, 400, 'Malformed register data', 'The refresh-session cookie might be currpted');
     }
     // Validation: correct length
-    if (username.length > 30) return res.status(400).json(
-        {
-            err: 'The Username must be under 30 characters'
-        });
-    if (email.length > 255) return res.status(400).json(
-        {
-            err: 'The email must be under 255 characters'
-        }
-    );
+    if (username.length > 30) return sendErrorResponse
+        (
+            res,
+            400,
+            'The Username must be under 30 characters',
+            'You cannot set an username with length above 30'
+        );
+    if (email.length > 255) return sendErrorResponse
+        (
+            res,
+            400,
+            'The email must be under 255 characters',
+            'You cannot set an email with length above 255'
+        )
 
     // Validation duplicate data
     const existing = await pool.query(
@@ -40,9 +44,13 @@ export default async function register(req: Request, res: Response) {
         [username, email]
     ).then(res => res.rows);
 
-    if (existing.length > 0) {
-        return res.status(409).json({ err: 'An account with these details may already exist' });
-    }
+    if (existing.length > 0) return sendErrorResponse
+        (
+            res,
+            409,
+            'An account with these details may already exist',
+            'Please login with your password'
+        )
 
     const poolClient = await pool.connect();
     try {
@@ -66,7 +74,6 @@ export default async function register(req: Request, res: Response) {
             }
         };
         await poolClient.query('COMMIT;');
-
         sendCookies(res, sessionId, refreshToken, userInfo.id);
         return res.status(201).json({ res: resObj });
 

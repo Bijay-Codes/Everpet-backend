@@ -114,3 +114,8 @@ describe('POST : auth/login', () => {
     }, 15000);
 })
 
+describe('Post : auth/refresh', () => {
+    test('Refresh attempt with valid data returns 200', async () => {
+
+    })
+})
