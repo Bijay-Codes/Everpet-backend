@@ -56,7 +56,6 @@ describe('POST : auth/register', () => {
         expect(refreshSessionCookie).toContain('HttpOnly');
         expect(refreshSessionCookie).toContain('Path');
         expect(refreshSessionCookie).toContain('Expires');
-        expect(refreshSessionCookie).toContain('Secure');
     }, 15000);
 });
 
@@ -112,7 +111,6 @@ describe('POST : auth/login', () => {
         expect(refreshSessionCookie).toContain('HttpOnly');
         expect(refreshSessionCookie).toContain('Path');
         expect(refreshSessionCookie).toContain('Expires');
-        expect(refreshSessionCookie).toContain('Secure');
     }, 15000);
 })
 

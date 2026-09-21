@@ -8,6 +8,7 @@ import bcrypt from 'bcrypt';
 
 
 export default async function register(req: Request, res: Response) {
+    console.log(req.body);
     const { createCsrfToken } = useCsrf();
     let { username, email, password } = req.body;
 
@@ -66,7 +67,7 @@ export default async function register(req: Request, res: Response) {
         };
         await poolClient.query('COMMIT;');
 
-        sendCookies(res, sessionId, refreshToken);
+        sendCookies(res, sessionId, refreshToken, userInfo.id);
         return res.status(201).json({ res: resObj });
 
     } catch (err) {

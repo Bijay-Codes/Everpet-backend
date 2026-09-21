@@ -45,7 +45,7 @@ export default async function login(req: Request, res: Response) {
 
         await poolClient.query('COMMIT;');
 
-        sendCookies(res, sessionId, refreshToken);
+        sendCookies(res, sessionId, refreshToken, userInfo.id);
 
         // ! Reminder set up either an cron or route to clear previous expired sessions
         return res.status(200).json({ res: resObj });

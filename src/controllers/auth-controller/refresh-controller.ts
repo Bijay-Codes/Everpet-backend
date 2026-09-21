@@ -57,7 +57,7 @@ export default async function refresh(req: Request, res: Response) {
         const newExpiryTime = getRefreshTokenExpiry();
         await pool.query('UPDATE refresh_tokens SET token_hash=$1, expires_at=$2 WHERE id=$3 AND user_id=$4;', [refreshTokenHash, newExpiryTime, session.id, userId]);
 
-        sendCookies(res, sessionId, refreshToken);
+        sendCookies(res, sessionId, refreshToken, id);
         const resObj: ServerResponse = {
             isSuccess: true,
             data: {
