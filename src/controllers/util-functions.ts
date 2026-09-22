@@ -85,6 +85,7 @@ export function sendCookies(res: Response, sessionId: string, refreshToken: stri
         {
             httpOnly: true,
             secure: !isTest,
+            partitioned: !isTest,
             sameSite: isTest ? 'lax' : 'none',
             expires: getRefreshTokenExpiry(),
             path: '/auth'
