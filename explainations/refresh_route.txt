@@ -1,0 +1,15 @@
+The Refresh route is there for 2 specific things,
+
+1. To help with auto login on refresh of tab 
+2. get new acceess token and swap refresh_tokens
+
+The auto login feature : 
+In the frontend we initially call this route to get data to get the user started
+The logic behind it,
+if the user has previously logged in the browser he must have cookies from previous successfull login / register
+when this route is called if the cookies are there then they get attached automatically and retun the user data that is necessary for dashboard
+but if they dont have the cookies we treat it as a new user or an new device trying to login so we redirect them to the login / signup
+
+what values it takes from cookies :
+it requires sending session id, user id, refresh token.
+it also requires setting an custom authorization header with the value of csrf token being issued per user to avoid csrf issues and we cant really trust the cookies only and asking them for password each time is too lengthy process which is friction to users flow.
