@@ -14,7 +14,6 @@ describe('POST : auth/register', () => {
     test('Valid registeration returns 201 and data in correct format', async () => {
         const everpetAgent = request.agent(everpet);
         const res = await everpetAgent.post('/auth/register').send(validRegisterPayload());
-        console.log(res.body)
         expect(res.status).toBe(201);
         isAuthFormat(res);
     });
@@ -116,6 +115,14 @@ describe('POST : auth/login', () => {
 
 describe('Post : auth/refresh', () => {
     test('Refresh attempt with valid data returns 200', async () => {
+        const everpetAgent = request.agent(everpet);
+        const res = await everpetAgent.post('/auth/register').send(validRegisterPayload());
+        expect(res.status).toBe(201);
 
-    })
+        const csrfToken = res.body.res.data.csrfToken;
+        expect(csrfToken).toBeDefined();
+
+        const res2 = await everpetAgent.post('/auth/refresh').set('Authorization', `Bearer ${csrfToken}`);
+        expect(res2.status).toBe(200);
+    });
 })

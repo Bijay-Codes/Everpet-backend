@@ -78,7 +78,7 @@ export async function getSingleUserPet(req: AuthRequest, res: Response) {
                 sicknessLiftAt: usersPet.sickness_lift_at
             },
             lastTickedAt: usersPet.last_ticked_at
-        }
+        };
 
         const petInstance = new Pet(constructorObj);
         petInstance.applyTick();
