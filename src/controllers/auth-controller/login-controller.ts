@@ -8,8 +8,9 @@ import bcrypt from 'bcrypt'
 export default async function login(req: Request, res: Response) {
     let { identifier, password } = req.body;
 
-    const isValid = isNullorUndefined(identifier, password);
-    if (isValid) return res.status(400).json({ err: 'Identifier or password not provided : provide either email or username as identifier and a valid password' });
+    const isInvalid = isNullorUndefined(identifier, password);
+    if (isInvalid) return sendErrorResponse(res, 400, 'Identifier or password not provided', 'provide either email or username as identifier and a valid password');
+
     password = password.trim();
     identifier = identifier.trim();
     const { createCsrfToken } = useCsrf();
@@ -17,15 +18,12 @@ export default async function login(req: Request, res: Response) {
     try {
 
         const resData = await poolClient.query('SELECT id,username,email,password_hash FROM users WHERE (username=$1 OR email=$1);', [identifier]);
+
         const userInfo = resData.rows[0];
-        if (!userInfo) {
-            return res.status(404).json({ err: 'Wrong password or identifier : identifier can be either email or username' });
-        };
+        if (!userInfo) return sendErrorResponse(res, 404, 'Wrong password or identifier', 'identifier can be either email or username');
 
         const isValidPassword = await bcrypt.compare(password, userInfo.password_hash);
-        if (!isValidPassword) {
-            return res.status(404).json({ err: 'Wrong password or identifier : identifier can be either email or username' });
-        };
+        if (!isValidPassword) return sendErrorResponse(res, 404, 'Wrong password or identifier', 'identifier can be either email or username');
 
         await poolClient.query('BEGIN;');
         const { accessToken, refreshToken, refreshTokenHash } = await createToken(userInfo.id);

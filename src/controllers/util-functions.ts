@@ -102,5 +102,5 @@ export function sendErrorResponse(res: Response, status: number = 500, message: 
             details: details
         }
     }
-    return res.status(status).json({ resObj });
+    return res.status(status).json({ res: resObj });
 }

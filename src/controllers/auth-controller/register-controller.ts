@@ -11,10 +11,9 @@ export default async function register(req: Request, res: Response) {
     const { createCsrfToken } = useCsrf();
     let { username, email, password } = req.body;
 
-    if (isNullorUndefined(username, email, password)) return res.status(400).json(
-        {
-            err: 'Incomplte user infomation provided, required format: {username:string,email:string,password:string'
-        });
+    if (isNullorUndefined(username, email, password))
+        return sendErrorResponse(res, 400, 'Incomplte user infomation provided', 'required format: {username:string,email:string,password:string');
+
     try {
         username = username.trim();
         email = email.trim().toLowerCase();
@@ -23,20 +22,10 @@ export default async function register(req: Request, res: Response) {
         return sendErrorResponse(res, 400, 'Malformed register data', 'The refresh-session cookie might be currpted');
     }
     // Validation: correct length
-    if (username.length > 30) return sendErrorResponse
-        (
-            res,
-            400,
-            'The Username must be under 30 characters',
-            'You cannot set an username with length above 30'
-        );
-    if (email.length > 255) return sendErrorResponse
-        (
-            res,
-            400,
-            'The email must be under 255 characters',
-            'You cannot set an email with length above 255'
-        )
+    if (username.length > 30)
+        return sendErrorResponse(res, 400, 'The Username must be under 30 characters', 'You cannot set an username with length above 30');
+    if (email.length > 255)
+        return sendErrorResponse(res, 400, 'The email must be under 255 characters', 'You cannot set an email with length above 255');
 
     // Validation duplicate data
     const existing = await pool.query(
@@ -44,13 +33,8 @@ export default async function register(req: Request, res: Response) {
         [username, email]
     ).then(res => res.rows);
 
-    if (existing.length > 0) return sendErrorResponse
-        (
-            res,
-            409,
-            'An account with these details may already exist',
-            'Please login with your password'
-        )
+    if (existing.length > 0)
+        return sendErrorResponse(res, 409, 'An account with these details may already exist', 'Please login with your password');
 
     const poolClient = await pool.connect();
     try {
