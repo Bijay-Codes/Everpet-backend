@@ -27,7 +27,7 @@ export default async function refresh(req: Request, res: Response) {
 
     if (!csrfToken) return sendErrorResponse(res, 400, 'Csrf token must be a string');
     if (isNullorUndefined(sessionId, userId, oldRefreshToken, csrfToken))
-        return sendErrorResponse(res, 400, 'Revcieved invalid values', 'sessionId, userId, oldRefreshToken, csrfToken');
+        return sendErrorResponse(res, 400, 'Recieved invalid values', 'sessionId, userId, oldRefreshToken, csrfToken');
     if (!validateCsrfToken(sessionId, csrfToken)) return sendErrorResponse(res, 403, 'CSRF token mismatch');
 
     try {

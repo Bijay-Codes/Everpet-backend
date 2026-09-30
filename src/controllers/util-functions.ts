@@ -63,12 +63,14 @@ export function useCsrf() {
             return crypto.createHmac('sha256', process.env.CSRF_SECRET!).update(sessionId).digest('hex');
         },
         validateCsrfToken(sessionId: string, csrfToken: string) {
+
             if (typeof sessionId !== 'string' || typeof csrfToken !== 'string') return false;
 
             const newTokenForValidation =
                 crypto.createHmac('sha256', process.env.CSRF_SECRET!)
                     .update(sessionId)
                     .digest('hex');
+
             const givenToken = Buffer.from(csrfToken);
             const expectedToken = Buffer.from(newTokenForValidation);
             if (expectedToken.length !== givenToken.length) return false;

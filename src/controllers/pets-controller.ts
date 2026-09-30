@@ -171,4 +171,4 @@ export async function getStorePets(req: AuthRequest, res: Response) {
     } catch {
         sendErrorResponse(res);
     };
-}
+};
