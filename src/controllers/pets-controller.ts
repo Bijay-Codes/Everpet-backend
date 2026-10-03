@@ -5,6 +5,24 @@ import { formatAsRows, isNullorUndefined, isValidInitialData, sendErrorResponse 
 import { createNewPet, Pet } from "../models/Pets.js";
 import API_CONFIG from '../Configs/api-config.js'
 import type { PetData } from "../models/Types/PetTypes.js";
+import { SPECIES_CONFIG } from "../Configs/species-config.js";
+
+
+export function getCreateablePets(_req: AuthRequest, res: Response) {
+    try {
+        const species = Object.entries(SPECIES_CONFIG).map(([name, obj]) => ({
+            name,
+            diet: obj.diet,
+            bondDecay: obj.bondDecayPerTick,
+            stressIncrease: obj.stressIncreasePerTick,
+            lifespan: obj.lifespanYears
+        }));
+
+        return res.status(200).json({ isSuccess: true, res: species });
+    } catch {
+        return sendErrorResponse(res);
+    };
+};
 
 export async function getMultipleUserPets(req: AuthRequest, res: Response) {
     const { userID } = req;

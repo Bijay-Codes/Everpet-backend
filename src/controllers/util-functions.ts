@@ -5,6 +5,7 @@ import { ACCESS_TOKEN_EXPIRY, getRefreshTokenExpiry } from '../Configs/auth-conf
 import type { PoolClient } from "pg";
 import type { Response } from 'express';
 import type { ServerResponse } from '../response-formats/auth-format.js';
+import { SPECIES_CONFIG } from '../Configs/species-config.js';
 export async function insertRefreshToken(insertClient: PoolClient, userId: string, tokenHash: string) {
     const sessionInfo = await insertClient.query('INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3) RETURNING id;',
         [userId, tokenHash, getRefreshTokenExpiry()]
@@ -38,15 +39,16 @@ export function formatAsRows(data: object) {
 
 export function isValidInitialData(petData: { name: string, age: number, species: string }) {
     if (petData.name && petData.name.length <= 40) {
-        if (petData.species) {
+        const speciesNames = Object.keys(SPECIES_CONFIG);
+        if (petData.species && speciesNames.includes(petData.species)) {
             return true;
         } else {
-            return false
-        }
+            return false;
+        };
     } else {
         return false;
-    }
-}
+    };
+};
 
 export function isNullorUndefined(...args: string[]) {
     return args.some(arg => {
@@ -54,8 +56,8 @@ export function isNullorUndefined(...args: string[]) {
         if (typeof arg !== 'string') return true;
         const trimmed = arg.trim();
         if (trimmed === '') return true;
-    })
-}
+    });
+};
 
 export function useCsrf() {
     return {
@@ -76,8 +78,8 @@ export function useCsrf() {
             if (expectedToken.length !== givenToken.length) return false;
             return crypto.timingSafeEqual(givenToken, expectedToken);
         }
-    }
-}
+    };
+};
 
 
 export function sendCookies(res: Response, sessionId: string, refreshToken: string, userId: string) {
@@ -91,8 +93,8 @@ export function sendCookies(res: Response, sessionId: string, refreshToken: stri
             sameSite: isTest ? 'lax' : 'none',
             expires: getRefreshTokenExpiry(),
             path: '/auth'
-        })
-}
+        });
+};
 
 export function sendErrorResponse(res: Response, status: number = 500, message: string = 'Server error', details: object | string = 'Something went wrong, please try again later') {
     const resObj: ServerResponse = {
@@ -103,6 +105,6 @@ export function sendErrorResponse(res: Response, status: number = 500, message: 
             code: status,
             details: details
         }
-    }
+    };
     return res.status(status).json({ res: resObj });
-}
+};

@@ -5,8 +5,8 @@ export const SPECIES_CONFIG: Record<string, SpeciesConfig> = {
         lifespanYears: 70,
         diet: 'carnivore',
         caloriesNeeded: 1500,
-        bondDecayPerTick: 0.4,   // fast — low loyalty, per your design
-        metabolicRatePerTick: 0.2, // slow — cold-blooded, low metabolic need
+        bondDecayPerTick: 0.6,
+        metabolicRatePerTick: 0.2,
         stressIncreasePerTick: 0.6
     },
     fox: {

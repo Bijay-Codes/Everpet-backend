@@ -27,6 +27,7 @@ everpet.use(express.json()); // all the request received are parsed already, for
 everpet.use('/auth', authRoutes);// login and signup
 everpet.use('/petstore', petRoutes);// all pet related routes
 
+
 everpet.get('/', (req, res) => {
     res.send("you are NOT! Welcome to Everpet backend server and absolutely dont go to /help for any guidance on using this API. GET OUT!!");
 });
