@@ -1,198 +1,288 @@
-import type { DietType, Food, PetData } from "./Types/PetTypes.js";
+import type { Food, PetData } from "./Types/PetTypes.js";
 import STAT_CONFIG from '../Configs/stats-calc-config.js';
 import { SPECIES_CONFIG } from "../Configs/species-config.js";
 import type { InitialPetData } from "./Types/PetTypes.js";
 import { startsAt } from "../Configs/starting-values.js";
 export class Pet {
-    currentOwnerID: number | null;
+    currentOwnerID: string | null;
     name: string;
     char: PetData['char'];
     state: PetData['state'];
     stats: PetData['stats'];
     lastTickedAt: Date;
     gotTicked: boolean;
+
     constructor(petInfo: PetData) {
         this.currentOwnerID = petInfo.ownerID;
         this.name = petInfo.name;
         this.char = petInfo.char;
         this.state = petInfo.state;
         this.stats = petInfo.stats;
-        this.lastTickedAt = new Date();
+        this.lastTickedAt = petInfo.lastTickedAt ?? new Date();
         this.gotTicked = true;
-    }
+    };
 
-
-    increaseBond(increment: number) {
-        this.stats.bond += Math.min(STAT_CONFIG.STATS_CAP, this.stats.bond + increment);
-    }
-
-    bondDecay() {
-        const sc = SPECIES_CONFIG[this.char.species];
-        const bondDrain = sc?.bondDecayPerTick ?? 0;
-        this.stats.bond = Math.max(0, (this.stats.bond - bondDrain));
-    }
-
-    checkDiet(food: DietType): boolean {
-        return this.char.diet === food;
-    }
-
-    feedFood(food: Food) {
-        if (this.isDead()) return;
-        const caloriesNeeded = SPECIES_CONFIG[this.char.species]?.caloriesNeeded ?? 0
-        if (this.checkDiet(food.dietType)) {
-            this.stats.caloriesConsumed = Math.min(caloriesNeeded,
-                this.stats.caloriesConsumed + food.caloriesProvided
-            )
-            const percentOfCaloriesProvided = (caloriesNeeded / food.caloriesProvided) * 100;
-            this.stats.appetite -= Math.max(100, percentOfCaloriesProvided);
-        }
-    }
-
-    drainHP(amount: number) {
-        this.stats.hp -= amount
-    }
-    makeSick(reason: string = 'food') {
-        if (this.state.isSick || this.state.isHealing) return null;
-        if (reason === 'food' || reason === 'stress') {
-            this.state.isSick = true;
-            this.char.sicknessStartedAt = new Date();;
-        } else if (reason === 'random') {
-            const chanceToCheckFor = STAT_CONFIG.SICKNESS_RANDOM_ROLL_CHANCE;
-            const canGetSick = Math.random() < chanceToCheckFor;
-            if (canGetSick) {
-                this.state.isSick = true;
-                this.char.sicknessStartedAt = new Date();
-                return true;
-            }
-        }
-    }
-    startCuring() {
-        if (this.isDead() || this.state.isHealing || !this.state.isSick) return;
-        const now = Date.now();
-        const oneDayInMS = 1 * 24 * 60 * 60 * 1000;
-        const isSickFromDays = (now - this.char.sicknessStartedAt.getTime()) / oneDayInMS;
-        this.state.isSick = true;
-        this.state.isHealing = true;
-        const { HEAL_MIN_DAYS, HEAL_MAX_DAYS } = STAT_CONFIG;
-        if (isSickFromDays <= 1) {
-            const msTimeStamp = now + (HEAL_MIN_DAYS * 24 * 60 * 60 * 1000);
-            this.stats.sicknessLiftAt = new Date(msTimeStamp);
-        } else if (isSickFromDays >= HEAL_MAX_DAYS) {
-            const msTimeStamp = now + (HEAL_MAX_DAYS * 24 * 60 * 60 * 1000);
-            this.stats.sicknessLiftAt = new Date(msTimeStamp);
-        } else {
-            const msTimeStamp = now + (isSickFromDays * 24 * 60 * 60 * 1000);
-            this.stats.sicknessLiftAt = new Date(msTimeStamp);
-        }
-    }
-    canCureSickness() {
-        if (this.isDead()) return
-        this.state.isSick = false;
-        this.state.isHealing = false;
-    }
-    isDead() {
+    checkIsDead(): boolean {
         return this.stats.hp <= 0;
-    }
-    killPet(reason: string) {
-        if (!reason) return false;
-        this.drainHP(this.stats.maxHp);
-        this.state.isDead = true;
-        this.char.dateOfDeath = new Date();
-        this.char.reasonOfDeath = reason;
-    }
-    canReleasePet() {
-        if (!this.isDead()) return true;
-    }
+    };
 
-    increaseStress() {
-        // linear growth of stress not explosive using exponent by trackig how much time condition was true
-        const { STRESS_PER_TICK_BOND, STRESS_PER_TICK_SICK, STRESS_PER_TICK_UNDERFED } = STAT_CONFIG;
-        if (this.stats.bond < 20) {
-            this.stats.stress += STRESS_PER_TICK_BOND;
-        }
-        if (this.state.isSick) {
-            this.stats.stress += STRESS_PER_TICK_SICK;
-        }
-        if (this.stats.daysUnderfed > 0) {
-            this.stats.stress += STRESS_PER_TICK_UNDERFED;
-        }
-    }
+    #drainHp(amount: number) {
+        return this.stats.hp = this.stats.hp - amount;
+    };
 
-    reduceApetite() {
-        if (this.isDead()) return;
-        const metabolicRatePerTick = SPECIES_CONFIG[this.char.species]?.metabolicRatePerTick ?? 0;
-        this.stats.appetite = Math.min(100, this.stats.appetite + metabolicRatePerTick);
-    }
-    hpDrainMultiplier() {
-        const { SICKNESS_HP_MULTIPLIER,
-            HEALING_HP_MULTIPLIER } = STAT_CONFIG;
-        if (this.state.isSick && this.state.isHealing) {
-            return HEALING_HP_MULTIPLIER;
-        } else if (this.state.isSick && !this.state.isHealing) {
-            return SICKNESS_HP_MULTIPLIER;
-        } else {
-            return 1;
-        }
-    }
-    applyTick() {
-        if (this.isDead()) return;
-        // if (Date.now() - (new Date(this.lastTickedAt).getDate()) > 2 * 60 * 60 * 1000) return
-        const ticksSinceLastCheck = (Date.now() - this.lastTickedAt.getTime()) / STAT_CONFIG.TICK_INTERVAL_MS;
-        if (ticksSinceLastCheck < 1) {
-            this.gotTicked = false;
+    #applyAgeHpDrain() {
+        const hpToDrain = STAT_CONFIG.BASE_HP_DRAIN_PER_DAY / STAT_CONFIG.TICKS_PER_DAY;
+        this.#drainHp(hpToDrain);
+    };
+
+    #applyStatusEffectHpDrain() {
+        let multiplier = 0;
+        const { isSick, isHealing } = this.state;
+
+        if (isSick && !isHealing)
+            multiplier += STAT_CONFIG.SICKNESS_HP_MULTIPLIER;
+        if (isHealing)
+            multiplier += STAT_CONFIG.HEALING_HP_MULTIPLIER;
+
+        const baseDrainPerTick = STAT_CONFIG.BASE_HP_DRAIN_PER_DAY / STAT_CONFIG.TICKS_PER_DAY
+        const drain = baseDrainPerTick * multiplier;
+
+        this.stats.hp = Math.max(0, this.stats.hp - drain);
+    };
+
+    #increaseStress() {
+        const {
+            STRESS_PER_TICK_BOND,
+            STRESS_PER_TICK_SICK,
+            STRESS_PER_TICK_UNDERFED,
+            BOND_LOW_THRESHOLD,
+            STRESS_SICKNESS_THRESHOLD
+        } = STAT_CONFIG;
+
+        let multiplier = 0;
+        const species = SPECIES_CONFIG[this.char.species];
+        const stressIncrease = species?.stressIncreasePerTick ?? 0;
+
+        const { daysUnderfed, bond } = this.stats;
+        const { isSick, isHealing } = this.state;
+
+        if (daysUnderfed > 0)
+            multiplier += STRESS_PER_TICK_UNDERFED;
+        if (isSick && !isHealing)
+            multiplier += STRESS_PER_TICK_SICK;
+        if (bond < BOND_LOW_THRESHOLD)
+            multiplier += STRESS_PER_TICK_BOND;
+
+        if (this.stats.stress >= STRESS_SICKNESS_THRESHOLD)
+            this.#applySicknessEffect(0.6);
+
+        const stress = stressIncrease * multiplier;
+        this.stats.stress = Math.min(100, this.stats.stress + stress);
+    };
+
+    #decreaseStress() {
+        const { isHealing, isSick } = this.state;
+        const { daysUnderfed, bond } = this.stats;
+        const species = SPECIES_CONFIG[this.char.species];
+        const decrease = species?.stressDecreasePetTick ?? 0;
+
+        if ((!isSick || isHealing)
+            && bond > STAT_CONFIG.BOND_LOW_THRESHOLD
+            && daysUnderfed === 0)
+            this.stats.stress = Math.max(0, this.stats.stress - decrease);
+    };
+
+    #applyBondDrain() {
+        const config = SPECIES_CONFIG[this.char.species];
+        const bondDecayPerTick = config?.bondDecayPerTick ?? 0;
+
+        this.stats.bond = Math.max(0, this.stats.bond - bondDecayPerTick);
+    };
+
+    checkSicknessCured(tickTime: number) {
+        if (!this.state.isSick || !this.state.isHealing || !this.stats.sicknessLiftAt || !tickTime)
             return;
-        }
-        const flooredTicks = Math.floor(ticksSinceLastCheck);
-        const { BASE_HP_DRAIN_PER_TICK,
-            TICK_INTERVAL_MS,
-            TICKS_PER_DAY,
-            UNDERFED_CALORIE_RATIO_THRESHOLD } = STAT_CONFIG;
+        const curedAt = this.stats.sicknessLiftAt.getTime();
+        if (tickTime >= curedAt) {
+            this.#cureSickness();
+        };
+    };
 
+    applyUnderFedDay() {
+        const { caloriesConsumed, caloriesNeeded } = this.stats;
 
-        for (let tick = 1; tick <= flooredTicks; tick++) {
+        const isUnderfedDay = (caloriesConsumed / caloriesNeeded) < STAT_CONFIG.UNDERFED_CALORIE_RATIO_THRESHOLD;
+        if (isUnderfedDay) {
+            this.state.isHungry = true;
+            this.stats.daysUnderfed += 1;
+        } else {
+            this.stats.daysUnderfed = 0;
+        };
+    };
 
-            if (this.stats.sicknessLiftAt <= new Date()) {
-                this.canCureSickness(); // only tries to cure sickness not confirmed if it will be cured
-            }
-            if (tick % TICKS_PER_DAY === 0) {
-                const caloriesConsumed = this.stats.caloriesConsumed;
-                const caloriesNeeded = this.stats.caloriesNeeded;
-                if (caloriesConsumed / caloriesNeeded <= UNDERFED_CALORIE_RATIO_THRESHOLD) {
-                    this.stats.daysUnderfed++;
-                } else {
-                    this.stats.daysUnderfed = 0;
-                }
-                this.stats.caloriesConsumed = 0;
-            }
-            this.increaseStress();
+    #cureSickness() {
+        this.stats.bond = 100;
+        this.stats.stress = 0;
+        this.state.isHealing = false;
+        this.state.isSick = false;
+    };
 
-            if (this.stats.stress < STAT_CONFIG.STRESS_SICKNESS_THRESHOLD) {
-                this.makeSick('random');
-            } else {
-                this.makeSick('stress');
-            }
+    startCureSickness() {
+        if (!this.state.isSick)
+            return;
+        const now = Date.now();
+        const dayMS = 24 * 60 * 60 * 1000;
+        const sicknessStartedDays = (now - this.char.sicknessStartedAt.getTime()) / dayMS;
+        const healDays = Math.min(4, Math.max(1, sicknessStartedDays));
+        const healDaysMs = healDays * dayMS;
 
-            this.bondDecay();
-            this.reduceApetite();
-            const drainMultiplier = this.hpDrainMultiplier();
-            const hpDrain = BASE_HP_DRAIN_PER_TICK * drainMultiplier;
-            this.drainHP(hpDrain);
-            if (this.stats.hp <= 0) break;
-        }
+        this.state.isHealing = true;
+        this.stats.sicknessLiftAt = new Date(now + healDaysMs);
+    };
 
-        this.lastTickedAt = new Date(this.lastTickedAt.getTime() + flooredTicks * TICK_INTERVAL_MS);
-        if (this.stats.hp <= 0) {
-            if (this.state.isSick && !this.state.isHealing) {
-                this.killPet('Died from sickness');
-            } else if (this.state.isHealing) {
-                this.killPet('Died from sickness while healing');
-            } else {
-                this.killPet('Old age');
-            }
-        }
+    #applySicknessEffect(chance?: number) {
+        if (this.state.isSick)
+            return;
+        const percent = chance ? chance : STAT_CONFIG.SICKNESS_RANDOM_ROLL_CHANCE;
+        const chanceToSickness = Math.random() < percent;
+        if (chanceToSickness) {
+            this.char.sicknessStartedAt = new Date();
+            this.state.isSick = true;
+        };
+    };
+
+    feedPet(food: Food) {
+        if (this.checkIsDead())
+            return;
+
+        const caloriesToAdd = food.caloriesProvided;
+        const appetiteDrop = (food.caloriesProvided / this.stats.caloriesNeeded) * STAT_CONFIG.STATS_CAP;
+        if (food.dietType !== this.char.diet) {
+            this.stats.caloriesConsumed = Math.min(this.stats.caloriesNeeded,
+                this.stats.caloriesConsumed + (caloriesToAdd / 2));
+            this.stats.appetite = 100;
+            this.state.isHungry = true;
+            this.#applySicknessEffect(0.4);
+            return;
+        };
+
+        this.stats.caloriesConsumed = Math.min(this.stats.caloriesNeeded,
+            this.stats.caloriesConsumed + caloriesToAdd);
+
+        this.stats.appetite = Math.max(0, this.stats.appetite - appetiteDrop);
+        this.state.isHungry = this.stats.appetite > 60;
+    };
+
+    interact(increase: number) {
+        const increment = increase ? increase : STAT_CONFIG.BOND_INCREASE_ON_INTERACT;
+        this.stats.bond = Math.min(100, this.stats.bond + increment);
     }
 
-    getFormat() {
+    #applyAppetiteIncrease() {
+        const metabolicRatePerTick = SPECIES_CONFIG[this.char.species]?.metabolicRatePerTick ?? 0;
+        if (!metabolicRatePerTick || this.stats.appetite === 100)
+            return false;
+
+        const {
+            APPETITE_MULTIPLIER_NORMAL,
+            APPETITE_MULTIPLIER_STRESSED,
+            APPETITE_MULTIPLIER_SICK, MIN_CRITICAL_STRESS
+        } = STAT_CONFIG;
+
+        const { isSick } = this.state;
+        const { appetite } = this.stats;
+
+        let multiplier = APPETITE_MULTIPLIER_NORMAL;
+
+        if (isSick)
+            multiplier += APPETITE_MULTIPLIER_SICK;
+
+        if (this.stats.stress >= MIN_CRITICAL_STRESS)
+            multiplier += APPETITE_MULTIPLIER_STRESSED
+
+        this.stats.appetite = Math.min(100, appetite + metabolicRatePerTick * multiplier);
+        this.state.isHungry = this.stats.appetite > 60;
+    };
+
+    #getCauseOfDeath(): string {
+        if (this.state.isSick)
+            return this.state.isHealing ? 'Died while healing' : 'Died fighting sickness';
+
+        const { MIN_CRITICAL_BOND, MIN_CRITICAL_STRESS } = STAT_CONFIG;
+        if (this.stats.daysUnderfed >= 3)
+            return 'Died from lack of food';
+
+        if (this.stats.stress >= MIN_CRITICAL_STRESS)
+            return 'Died from heavy stress and anxiety';
+
+        if (this.stats.bond <= MIN_CRITICAL_BOND)
+            return 'Died feeling sad and negleted';
+
+        return 'Died of old age';
+    };
+
+    #killPet(reason = this.#getCauseOfDeath(), dateOfDeath = new Date()) {
+        this.state.isDead = true;
+        this.char.reasonOfDeath = reason;
+        this.char.dateOfDeath = dateOfDeath;
+    };
+
+    #isNewDay(tickTime: Date): boolean {
+        const currentDate = tickTime.getUTCDate();
+        const previousTickTime = new Date(tickTime.getTime() - STAT_CONFIG.TICK_INTERVAL_MS);
+        const previousTickDate = previousTickTime.getUTCDate();
+
+        return currentDate !== previousTickDate;
+    };
+
+    applyTick() {
+        if (this.state.isDead)
+            return this.gotTicked = false;
+
+        const now = new Date();
+        const lastTick = this.lastTickedAt;
+        const elapsedTimeMs = now.getTime() - lastTick.getTime();
+        const ticks = Math.floor(elapsedTimeMs / STAT_CONFIG.TICK_INTERVAL_MS);
+
+        if (ticks <= 0)
+            return this.gotTicked = false;
+
+        for (let i = 1; i <= ticks; i++) {
+            const tickTimeMs = lastTick.getTime() + i * STAT_CONFIG.TICK_INTERVAL_MS;
+            const isNewDay = this.#isNewDay(new Date(tickTimeMs));
+
+            if (isNewDay) {
+                this.applyUnderFedDay()
+                this.stats.caloriesConsumed = 0;
+            };
+
+            this.checkSicknessCured(tickTimeMs);
+            this.#applyAgeHpDrain();
+            this.#increaseStress();
+            this.#decreaseStress();
+            this.#applyStatusEffectHpDrain();
+            this.#applyBondDrain();
+            this.#applyAppetiteIncrease();
+            this.#applySicknessEffect();
+
+            if (this.stats.hp <= 0) {
+
+                const diedOnTick = new Date(
+                    this.lastTickedAt.getTime() +
+                    i *
+                    STAT_CONFIG.TICK_INTERVAL_MS
+                );
+
+                this.#killPet(this.#getCauseOfDeath(), diedOnTick);
+                break;
+            };
+        };
+        const tickedAt = lastTick.getTime() + ticks * STAT_CONFIG.TICK_INTERVAL_MS
+        this.lastTickedAt = new Date(tickedAt);
+        this.gotTicked = true;
+    };
+
+    getFormatedObject() {
         const petinfo: PetData = {
             ownerID: this.currentOwnerID,
             name: this.name,
@@ -202,8 +292,8 @@ export class Pet {
             lastTickedAt: this.lastTickedAt
         }
         return petinfo;
-    }
-}
+    };
+};
 
 export function createNewPet(InitialPetData: InitialPetData, ownerID: string) {
     const { name, species } = InitialPetData;
@@ -213,14 +303,14 @@ export function createNewPet(InitialPetData: InitialPetData, ownerID: string) {
         return { err: 'Unknown species' }
     }
 
-    const { lifespanYears, caloriesNeeded, diet } = speciesConfig;
-    const maxHp = lifespanYears * 365;
+    const { lifespanDays, caloriesNeeded, diet } = speciesConfig;
+    const maxHp = lifespanDays * STAT_CONFIG.BASE_HP_DRAIN_PER_DAY;
 
     return {
         current_owner_id: ownerID,
         name: name,
         species: species,
-        life_span_years: lifespanYears,
+        life_span_days: lifespanDays,
         age: 0,
         diet: diet,
         is_hungry: false,
@@ -241,5 +331,5 @@ export function createNewPet(InitialPetData: InitialPetData, ownerID: string) {
         stress: startsAt.stress * 100,
         days_underfed: 0,
         last_ticked_at: new Date()
-    }
+    };
 };

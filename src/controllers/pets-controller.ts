@@ -15,7 +15,7 @@ export function getCreateablePets(_req: AuthRequest, res: Response) {
             diet: obj.diet,
             bondDecay: obj.bondDecayPerTick,
             stressIncrease: obj.stressIncreasePerTick,
-            lifespan: obj.lifespanYears
+            lifespan: obj.lifespanDays
         }));
 
         return res.status(200).json({ isSuccess: true, res: species });
@@ -43,7 +43,7 @@ export async function getMultipleUserPets(req: AuthRequest, res: Response) {
         const petsToSend = data.rows.map(data => {
             const petInstance = new Pet(data);
             petInstance.applyTick();
-            return petInstance.getFormat();
+            return petInstance.getFormatedObject();
         });
 
         return res.status(200).json({ pets: petsToSend });
@@ -103,12 +103,12 @@ export async function getSingleUserPet(req: AuthRequest, res: Response) {
 
         const petInstance = new Pet(constructorObj);
         petInstance.applyTick();
-        const formatedPet = petInstance.getFormat();
+        const formatedPet = petInstance.getFormatedObject();
         return res.status(200).json({ res: formatedPet });
 
     } catch (err) {
         return sendErrorResponse(res);
-    }
+    };
 }
 
 export async function postPet(req: AuthRequest, res: Response) {

@@ -45,3 +45,12 @@ c. is_healing - to track if healing is started since hp drain when sick but heal
 The owner/user can delete their account freely but their pets exists regardless so others can take it
 if the user_id from users get deleted then owner_id is to be null but had the constraint not null so it would have caused issues
 
+### CHANGE LOGS #3
+
+## Changes to schema
+
+! Rename the column name life_span_years to life_span_days,
+
+# Reason
+as part of the decison to move away from pets having lifespans comparable to their real life counterparts
+now moving from design that to an more compressed lifespans

@@ -1,5 +1,7 @@
+import type { SPECIES_CONFIG } from "../../Configs/species-config.js";
+
 export type DietType = "carnivore" | "herbivore" | "omnivore";
-export type Species = 'fox' | 'crocodile' | 'raccoon' | 'rabbit' | 'cat' | 'penguin';
+export type Species = keyof typeof SPECIES_CONFIG;
 
 export type InitialPetData = {
     ownerID: string,
@@ -8,7 +10,7 @@ export type InitialPetData = {
 }
 
 export interface PetData {
-    ownerID: number | null;
+    ownerID: string | null;
     name: string;
     char: {
         species: string;

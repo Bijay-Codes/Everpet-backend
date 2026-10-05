@@ -1,19 +1,22 @@
 const STAT_CONFIG = {
 
     STATS_CAP: 100,
+    MIN_CRITICAL_STRESS: 60,
+    MIN_CRITICAL_BOND: 20,
 
+    BOND_INCREASE_ON_INTERACT: 20,
     // --- Tick timing ---
     TICK_INTERVAL_MS: 2 * 60 * 60 * 1000, // 2 hours per tick
     TICKS_PER_DAY: 12,
 
     // --- HP drain ---
-    BASE_HP_DRAIN_PER_TICK: 10 / 12, // baseline, before any multiplier
+    BASE_HP_DRAIN_PER_DAY: 10, // baseline decrease, before any multiplier
 
     // --- Sickness ---
-    SICKNESS_RANDOM_ROLL_CHANCE: 0.10,       // per tick, only if not already sick
-    SICKNESS_HP_MULTIPLIER: 4,               // while sick, not healing
-    HEALING_HP_MULTIPLIER: 2,                // while sick AND healing (half of sickness multiplier)
-    STRESS_SICKNESS_THRESHOLD: 60,           // stress >= this guarantees sickness
+    SICKNESS_RANDOM_ROLL_CHANCE: 0.01,       // per tick, only if not already sick
+    SICKNESS_HP_MULTIPLIER: 2,               // while sick, not healing
+    HEALING_HP_MULTIPLIER: 1.5,                // while sick AND healing (half of sickness multiplier)
+    STRESS_SICKNESS_THRESHOLD: 60,
 
     // --- Healing ---
     HEAL_MIN_DAYS: 1,
@@ -32,7 +35,7 @@ const STAT_CONFIG = {
     APPETITE_MULTIPLIER_NORMAL: 1,
     APPETITE_MULTIPLIER_STRESSED: 2,
     APPETITE_MULTIPLIER_SICK: 3,
-    // combined (stressed + sick) = STRESSED * SICK = 6, derived, not separately stored
+
 } as const;
 
 export default STAT_CONFIG;
