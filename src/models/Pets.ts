@@ -299,9 +299,8 @@ export function createNewPet(InitialPetData: InitialPetData, ownerID: string) {
     const { name, species } = InitialPetData;
     const speciesConfig = SPECIES_CONFIG[species];
 
-    if (!speciesConfig) {
-        return { err: 'Unknown species' }
-    }
+    if (!speciesConfig)
+        return { isSuccess: false, err: 'Unknown species' };
 
     const { lifespanDays, caloriesNeeded, diet } = speciesConfig;
     const maxHp = lifespanDays * STAT_CONFIG.BASE_HP_DRAIN_PER_DAY;

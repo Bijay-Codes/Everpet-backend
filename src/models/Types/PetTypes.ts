@@ -7,7 +7,7 @@ export type InitialPetData = {
     ownerID: string,
     name: string,
     species: Species,
-}
+};
 
 export interface PetData {
     ownerID: string | null;
@@ -40,11 +40,20 @@ export interface PetData {
         sicknessLiftAt: Date;
     };
     lastTickedAt: Date;
-}
+};
 
 export interface Food {
     name: string;
     caloriesProvided: number;
     dietType: DietType;
-}
+};
 
+export interface SpeciesConfig {
+    lifespanDays: number;
+    diet: DietType;
+    caloriesNeeded: number;
+    bondDecayPerTick: number;      // higher = loses bond faster, less "loyal"
+    metabolicRatePerTick: number;  // higher = burns appetite faster
+    stressIncreasePerTick: number;
+    stressDecreasePetTick: number
+};

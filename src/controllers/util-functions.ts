@@ -6,12 +6,13 @@ import type { PoolClient } from "pg";
 import type { Response } from 'express';
 import type { ServerResponse } from '../response-formats/auth-format.js';
 import { SPECIES_CONFIG } from '../Configs/species-config.js';
+
 export async function insertRefreshToken(insertClient: PoolClient, userId: string, tokenHash: string) {
     const sessionInfo = await insertClient.query('INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3) RETURNING id;',
         [userId, tokenHash, getRefreshTokenExpiry()]
     );
     return sessionInfo.rows[0].id;
-}
+};
 
 export async function createToken(userId: string) {
     // needs userId,
@@ -23,18 +24,16 @@ export async function createToken(userId: string) {
         refreshToken: refreshToken,
         refreshTokenHash: refreshTokenHash
     };
-}
+};
 
-export function formatAsRows(data: object) {
-    const allKeys = Object.keys(data);
-    const allValues = Object.values(data);
-    let formatedRows = allKeys.join(', ');
-    let formatedValues = allValues.join(', ')
+export function formatAsRows(data: Record<string, unknown>) {
+    const keys = Object.keys(data);
+    const values = Object.values(data);
 
-    return {
-        formatedRows: formatedRows,
-        formatedValues: formatedValues
-    }
+    const columns = keys.join(', ');
+    const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
+
+    return { columns, placeholders, values };
 }
 
 export function isValidInitialData(petData: { name: string, age: number, species: string }) {

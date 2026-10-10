@@ -49,8 +49,8 @@ export async function getMultipleUserPets(req: AuthRequest, res: Response) {
         return res.status(200).json({ pets: petsToSend });
     } catch (err) {
         return sendErrorResponse(res);
-    }
-}
+    };
+};
 
 export async function getSingleUserPet(req: AuthRequest, res: Response) {
     const userID = req.userID;
@@ -109,11 +109,12 @@ export async function getSingleUserPet(req: AuthRequest, res: Response) {
     } catch (err) {
         return sendErrorResponse(res);
     };
-}
+};
 
 export async function postPet(req: AuthRequest, res: Response) {
     const userID = req.userID;
-    const petData = req.body;
+    const { petData } = req.body;
+
     if (!userID)
         return sendErrorResponse(res, 401, 'Create an account to add a pet to database');
     if (!petData)
@@ -123,17 +124,21 @@ export async function postPet(req: AuthRequest, res: Response) {
         return sendErrorResponse(res, 400, 'Not a valid pet data');
 
     const newPetData = createNewPet(petData, userID);
-    const { formatedRows, formatedValues } = formatAsRows(newPetData);
+
+    const { columns, placeholders, values } = formatAsRows(newPetData);
     const poolClient = await pool.connect();
     try {
         const userInfo = await pool.query('SELECT username FROM users WHERE id=$1;', [userID]);
-        const usernameSnapshot = userInfo.rows[0].id;
+        const usernameSnapshot = userInfo.rows[0].username;
 
         if (userInfo.rows.length <= 0)
             return sendErrorResponse(res, 404, 'No user found with the given id, are you sure you have an account');
 
         await poolClient.query('BEGIN;');
-        const petInfo = await poolClient.query('INSERT INTO pets ($1) values($2) returning $1;', [formatedRows, formatedValues]);
+        const petInfo = await poolClient.query(
+            `INSERT INTO pets (${columns}) VALUES (${placeholders}) RETURNING *;`,
+            values
+        );
 
         const petID = petInfo.rows[0].id;
         await poolClient.query('INSERT INTO ownership_history (pet_id,user_id,username_snapshot) values($1,$2,$3);', [petID, userID, usernameSnapshot]);
@@ -146,8 +151,8 @@ export async function postPet(req: AuthRequest, res: Response) {
         return sendErrorResponse(res);
     } finally {
         poolClient.release();
-    }
-}
+    };
+};
 
 export async function releasePet(req: AuthRequest, res: Response) {
     const { userID } = req;
@@ -166,7 +171,7 @@ export async function releasePet(req: AuthRequest, res: Response) {
     } catch (err) {
         return sendErrorResponse(res);
     }
-}
+};
 
 
 export async function getStorePets(req: AuthRequest, res: Response) {

@@ -1,4 +1,4 @@
-import type { SpeciesConfig } from "../models/Types/pets-info.js";
+import type { SpeciesConfig } from "../models/Types/PetTypes.js"
 
 export const SPECIES_CONFIG: Record<string, SpeciesConfig> = {
     ferret: {
