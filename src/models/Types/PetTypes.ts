@@ -20,6 +20,7 @@ export interface PetData {
         dateOfDeath: Date;
         reasonOfDeath: string;
         sicknessStartedAt: Date;
+        createdAt: Date;
     };
     state: {
         isHungry: boolean;
@@ -41,6 +42,36 @@ export interface PetData {
     };
     lastTickedAt: Date;
 };
+
+export interface PetObjectRaw {
+
+    id: string,
+    current_owner_id: string,
+    name: string,
+    species: keyof typeof SPECIES_CONFIG,
+    age: number,
+    life_span_days: number,
+    diet: DietType,
+    is_hungry: boolean,
+    is_asleep: boolean,
+    is_sick: boolean,
+    sickness_started_at: Date,
+    is_dead: boolean,
+    date_of_death: Date,
+    hp: number,
+    max_hp: number,
+    appetite: number,
+    calories_needed: number,
+    calories_consumed: number,
+    days_underfed: number,
+    bond: number,
+    stress: number,
+    last_ticked_at: Date,
+    created_at: Date,
+    sickness_lift_at: Date,
+    reason_of_death: string,
+    is_healing: boolean
+}
 
 export interface Food {
     name: string;

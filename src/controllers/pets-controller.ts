@@ -2,7 +2,7 @@ import type { Response } from "express";
 import pool from "../db/pool.js";
 import type { AuthRequest } from "../middleware/require-auth.js";
 import { formatAsRows, isNullorUndefined, isValidInitialData, sendErrorResponse } from "./util-functions.js";
-import { createNewPet, Pet } from "../models/Pets.js";
+import { createNewPet, formatAsPetData, Pet } from "../models/Pets.js";
 import API_CONFIG from '../Configs/api-config.js'
 import type { PetData } from "../models/Types/PetTypes.js";
 import { SPECIES_CONFIG } from "../Configs/species-config.js";
@@ -79,6 +79,7 @@ export async function getSingleUserPet(req: AuthRequest, res: Response) {
                 dateOfDeath: usersPet.date_of_death,
                 reasonOfDeath: usersPet.reason_of_death,
                 sicknessStartedAt: usersPet.sickness_started_at,
+                createdAt: usersPet.created_at,
             },
             state: {
                 isHungry: usersPet.is_hungry,
@@ -143,8 +144,11 @@ export async function postPet(req: AuthRequest, res: Response) {
         const petID = petInfo.rows[0].id;
         await poolClient.query('INSERT INTO ownership_history (pet_id,user_id,username_snapshot) values($1,$2,$3);', [petID, userID, usernameSnapshot]);
 
+
+        const formatedPetObject = formatAsPetData(petInfo.rows[0]);
+
         await poolClient.query('COMMIT;');
-        return res.status(201).json({ newPet: petInfo.rows[0] });
+        return res.status(201).json({ isSuccess: true, data: formatedPetObject });
 
     } catch (err) {
         await poolClient.query('ROLLBACK;');

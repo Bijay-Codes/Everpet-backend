@@ -1,4 +1,4 @@
-import type { Food, PetData } from "./Types/PetTypes.js";
+import type { Food, PetData, PetObjectRaw } from "./Types/PetTypes.js";
 import STAT_CONFIG from '../Configs/stats-calc-config.js';
 import { SPECIES_CONFIG } from "../Configs/species-config.js";
 import type { InitialPetData } from "./Types/PetTypes.js";
@@ -295,6 +295,43 @@ export class Pet {
     };
 };
 
+export function formatAsPetData(rawObj: PetObjectRaw) {
+    return {
+        id: rawObj.id,
+        ownerID: rawObj.current_owner_id,
+        name: rawObj.name,
+        char: {
+            species: rawObj.species,
+            lifespan: rawObj.life_span_days,
+            age: rawObj.age,
+            diet: rawObj.diet,
+            dateOfDeath: rawObj.date_of_death,
+            reasonOfDeath: rawObj.reason_of_death,
+            sicknessStartedAt: rawObj.sickness_started_at,
+            createdAt: rawObj.created_at
+        },
+        state: {
+            isHungry: rawObj.is_hungry,
+            asleep: rawObj.is_asleep,
+            isSick: rawObj.is_sick,
+            isHealing: rawObj.is_healing,
+            isDead: rawObj.is_dead,
+        },
+        stats: {
+            hp: rawObj.hp,
+            maxHp: rawObj.max_hp,
+            appetite: rawObj.appetite,
+            caloriesNeeded: rawObj.calories_needed,
+            caloriesConsumed: rawObj.calories_consumed,
+            bond: rawObj.bond,
+            stress: rawObj.stress,
+            daysUnderfed: rawObj.days_underfed,
+            sicknessLiftAt: rawObj.sickness_lift_at,
+        },
+        lastTickedAt: rawObj.last_ticked_at
+    };
+};
+
 export function createNewPet(InitialPetData: InitialPetData, ownerID: string) {
     const { name, species } = InitialPetData;
     const speciesConfig = SPECIES_CONFIG[species];
@@ -332,3 +369,4 @@ export function createNewPet(InitialPetData: InitialPetData, ownerID: string) {
         last_ticked_at: new Date()
     };
 };
+
