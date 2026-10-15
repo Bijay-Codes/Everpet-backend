@@ -15,6 +15,9 @@ export function getCreateablePets(_req: AuthRequest, res: Response) {
             diet: obj.diet,
             bondDecay: obj.bondDecayPerTick,
             stressIncrease: obj.stressIncreasePerTick,
+            metabolicRate: obj.metabolicRatePerTick,
+            stressDecreasePetTick: 0.1,
+            caloriesNeeded: 400,
             lifespan: obj.lifespanDays
         }));
 
