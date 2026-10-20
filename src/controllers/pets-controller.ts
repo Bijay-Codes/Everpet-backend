@@ -29,27 +29,33 @@ export function getCreateablePets(_req: AuthRequest, res: Response) {
 
 export async function getMultipleUserPets(req: AuthRequest, res: Response) {
     const { userID } = req;
-    const { startID, limit } = req.params;
+    const { offset, limit } = req.params;
     const maxFetchLimit = API_CONFIG.petfetchLimit;
-    if (!startID || !limit)
+    if (!limit)
         return sendErrorResponse(res, 401, 'Please provide a starting value, startID and limit stating how many pets you want to fetch', `Max limit is ${maxFetchLimit}`);
 
-    const startIDNum = Number(startID);
+    const offsetNum = Number(offset);
     const requestedPets = limit;
 
     const finalLimit = Math.min(Number(requestedPets), Number(maxFetchLimit));
     try {
-        const data = await pool.query('SELECT * FROM pets WHERE current_owner_id=$1 ORDER BY created_at LIMIT $2 OFFSET $3', [userID, finalLimit, startIDNum]);
+        const data = await pool.query('SELECT * FROM pets WHERE current_owner_id=$1 ORDER BY created_at LIMIT $2 OFFSET $3', [userID, finalLimit, offsetNum]);
         if (data.rows.length <= 0)
             return sendErrorResponse(res, 404, 'No pets found linked with your account', 'Create an pet to access it');
 
         const petsToSend = data.rows.map(data => {
-            const petInstance = new Pet(data);
+            const rawPetObj = formatAsPetData(data);
+            const petInstance = new Pet(rawPetObj);
             petInstance.applyTick();
             return petInstance.getFormatedObject();
         });
 
-        return res.status(200).json({ pets: petsToSend });
+        const resObj = {
+            isSuccess: true,
+            data: petsToSend,
+            err: null
+        }
+        return res.status(200).json(resObj);
     } catch (err) {
         return sendErrorResponse(res);
     };
@@ -77,7 +83,6 @@ export async function getSingleUserPet(req: AuthRequest, res: Response) {
             char: {
                 species: usersPet.species,
                 lifespan: usersPet.life_span_years,
-                age: usersPet.age,
                 diet: usersPet.diet,
                 dateOfDeath: usersPet.date_of_death,
                 reasonOfDeath: usersPet.reason_of_death,
@@ -179,7 +184,6 @@ export async function releasePet(req: AuthRequest, res: Response) {
         return sendErrorResponse(res);
     }
 };
-
 
 export async function getStorePets(req: AuthRequest, res: Response) {
     let { startID, limit } = req.params;

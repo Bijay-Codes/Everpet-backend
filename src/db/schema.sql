@@ -19,7 +19,6 @@ create table pets(
     name text not null check(char_length(name)<=40),
     -- limits the text length because this comes from users
     species text not null,
-    age numeric(5,2) not null default 0 check(age>=0),
     life_span_years numeric(5,2) not null default 0 check(life_span_years>=0),
     diet text not null check(diet in ('carnivore','herbivore','omnivore')),
 

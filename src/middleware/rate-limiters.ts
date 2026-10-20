@@ -24,5 +24,6 @@ export const globalLimiter = rateLimit({
     message: { err: 'Too many requests, please try again later' },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: isTestEnv
 });
 

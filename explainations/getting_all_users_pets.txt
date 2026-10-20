@@ -1,0 +1,68 @@
+The controller that controls the route that provides all the pets that are created by an user
+it must recieve an userid for that 
+
+And while making this controller i came to know about another issue that it had,
+i didnt know how many pets a user will have, and i cant hand them all at once 
+in one fetch request because if the user has many pets then the server will slow down and its not good practice to waste users internet and time
+by providing them the data they might not ever see
+
+to fix that i needed some way
+a. to track how many pets to send at one get request
+b. to track which pet was sent last so we can continue to send the list from that part ignoring the other previously sent parts
+
+to fix all this 
+i also had to decide in which format to filter the pets so none of the pets get missed by a small chance
+
+for example 
+if the list was 1,3,4,2,5,6 
+i gave the frontend the numbers till 4 [1,3,4] and took the last number 4 to fetch more
+what will happen when the user adds another one at the top now the list becomes [2,1,3,4...]
+if we send it now we miss the 2 and start giving from 4 and only send [2,5,6]
+
+furthermore if the list were to be changed in its order for some reason it will also cause the postion of data to change making some of the data not being setting
+
+to fix this i sorted them by the feild created_at so that i can arrange them in an orderly format 
+this also ensures that no pet can be left out from the list but it still has that gap where creating the pet puts the pet at the top of the list
+and since we provide them the pet from their last fetched id of the pet it will definitely miss that pet
+
+in an alternative i had thought of sending the id of all the pet that i had previously gotten and the db filters by checking if the id of the 
+pet sent was not already given
+then secondly it filters the pets by their created_at after that it sends the pets from that filtered list
+
+but in the above approach i think its a little too much hassle to do multiple check and giving all the pet id in request is also not very resource efficient
+since we dont know how many pets there are in database for that user we might send large amount of id in request making the server even slower
+
+the solution i am thinking of currently is that we should accept the gap of that pet and make up for it in frontend
+because everytime a pet is created we send all the data of the newly created pet to frontend as response 
+that pet object can be added to frontend list showing the pets list separately or refetch all pets once we detect an new pet has been created 
+i think refetch one is a bit harsh on user since he has to spend his data again to make request just for that 1 pet 
+instead since the pet did got created in database and we get the data we should add it the list displaying the pet in frontend 
+and when next time the user fetches it will obviously start from the start that will include all the pets that are in database
+this way we are not creating 2 source of truth the pet we add separately is just a reference of the same data the database holds
+
+in the end i have decided to take the values like 
+Limit 
+Start id 
+
+the limit - ensures that people dont send absurd limits like 10000000 or some other high number if they do have that many pets available 
+it will slow down or crash the server thats why i also have an 
+petfetchLimit
+in config that is ever changable at once so if the user provided very high number the max pet fethc limit will be used insted of their number
+
+Start id - given by frontend is the id of the last pet it got in its list, taken so that we can later filter the database by created_at then give the list 
+pets after that id
+
+
+
+THE INTERNALS
+
+the internals are to be set up as follows
+each pet that got selected to be sent to frontend is recieved in a array format
+and then each pet is then created into a pet instance using the class Pet 
+after that instance is created we call the class public method .appplyTick 
+this function internally calulates and modifies the data of the pet pet 
+but it also returns early if the Ticks havent passed for that pet so it doesnt keep the others holding
+after that we call another public method called getFormattedObj that provides the data that has now updated and ready to be sent to frontend
+
+an issue is that i never save that updated object back to the pet table in database so the controller is itself not completed yet and i just noticed this issue, before running/calling the route for this
+im suprised why i did not think something as basic as this but now that im writing it out i clearly saw the gap that i had not even thought of

@@ -303,7 +303,6 @@ export function formatAsPetData(rawObj: PetObjectRaw) {
         char: {
             species: rawObj.species,
             lifespan: rawObj.life_span_days,
-            age: rawObj.age,
             diet: rawObj.diet,
             dateOfDeath: rawObj.date_of_death,
             reasonOfDeath: rawObj.reason_of_death,

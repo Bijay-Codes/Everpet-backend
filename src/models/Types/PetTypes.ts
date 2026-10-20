@@ -15,7 +15,6 @@ export interface PetData {
     char: {
         species: string;
         lifespan: number;   // years
-        age: Date;
         diet: DietType;
         dateOfDeath: Date;
         reasonOfDeath: string;
@@ -49,7 +48,6 @@ export interface PetObjectRaw {
     current_owner_id: string,
     name: string,
     species: keyof typeof SPECIES_CONFIG,
-    age: number,
     life_span_days: number,
     diet: DietType,
     is_hungry: boolean,

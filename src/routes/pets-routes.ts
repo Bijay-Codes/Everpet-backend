@@ -8,8 +8,8 @@ petRoutes.use(requireAuth);
 
 petRoutes.post('/createpet', postPet);
 petRoutes.get('/pet:id', getSingleUserPet);
-petRoutes.get('/pets/:startID/:limit', getMultipleUserPets);
+petRoutes.get('/pets/:offset/:limit', getMultipleUserPets);
 petRoutes.get('/petstore', getStorePets);
-petRoutes.get('/species',getCreateablePets);
+petRoutes.get('/species', getCreateablePets);
 
 export default petRoutes;

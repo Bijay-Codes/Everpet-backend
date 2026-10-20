@@ -54,3 +54,12 @@ if the user_id from users get deleted then owner_id is to be null but had the co
 # Reason
 as part of the decison to move away from pets having lifespans comparable to their real life counterparts
 now moving from design that to an more compressed lifespans
+
+
+### CHANGE LOGS #4
+
+! Remove the age column from pets table
+
+# Reason 
+there was already an variable that tracked time a pet was created in db 
+we could get the age from that feild alone making tracking the age of pet separately redundant and unnecessary hassle
