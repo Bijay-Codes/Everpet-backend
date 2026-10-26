@@ -346,7 +346,6 @@ export function createNewPet(InitialPetData: InitialPetData, ownerID: string) {
         name: name,
         species: species,
         life_span_days: lifespanDays,
-        age: 0,
         diet: diet,
         is_hungry: false,
         is_asleep: false,

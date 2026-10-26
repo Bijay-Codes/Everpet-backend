@@ -10,19 +10,12 @@ import { SPECIES_CONFIG } from "../Configs/species-config.js";
 
 export function getCreateablePets(_req: AuthRequest, res: Response) {
     try {
-        const species = Object.entries(SPECIES_CONFIG).map(([name, obj]) => ({
-            name,
-            diet: obj.diet,
-            bondDecay: obj.bondDecayPerTick,
-            stressIncrease: obj.stressIncreasePerTick,
-            metabolicRate: obj.metabolicRatePerTick,
-            stressDecreasePetTick: 0.1,
-            caloriesNeeded: 400,
-            lifespan: obj.lifespanDays
-        }));
+        const species = Object.entries(SPECIES_CONFIG).map(([k, v]) => {
+            return { name: k, ...v }
+        })
 
-        return res.status(200).json({ isSuccess: true, res: species });
-    } catch {
+        return res.status(200).json({ isSuccess: true, data: species, err: null });
+    } catch (err) {
         return sendErrorResponse(res);
     };
 };

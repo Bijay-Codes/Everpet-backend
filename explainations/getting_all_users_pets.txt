@@ -66,3 +66,28 @@ after that we call another public method called getFormattedObj that provides th
 
 an issue is that i never save that updated object back to the pet table in database so the controller is itself not completed yet and i just noticed this issue, before running/calling the route for this
 im suprised why i did not think something as basic as this but now that im writing it out i clearly saw the gap that i had not even thought of
+
+
+New version
+__________________________________________________________________________________________________________________________________________________________________________________________________________
+
+Previously in the above approach i had expected OFFSET in db takes an number or string and finds it in database while 
+quering if the given value matched with the value in column then the OFFSET was started from that row
+but my assumption was wrong,
+
+OFFSET was not some magic propery or parameter i could stitch to a querry and expect that it will start from that pet id im giving it
+instead,
+it takes a number as value,
+it takes that number of rows from the list and ignores them or more simply cuts them from the filtering list,
+
+we give an OFFSET = 5 then if the list was 
+[1,2,3,4,5,6,7,8,9]
+ 
+we get [6,7,8,9] the 5 rows from before are not provided
+
+
+in solution to that 
+i renamed the startId to OFFSET
+and what i do in frontend is provide length of the pets in the list that frontend has in that moment
+as the OFFSET so server will skip those number of rows and send remaining data from list within the Limit
+like 20 rows after skipping 10 that it previously sent to frontend.
