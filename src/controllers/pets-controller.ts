@@ -23,9 +23,11 @@ export function getCreateablePets(_req: AuthRequest, res: Response) {
 export async function getMultipleUserPets(req: AuthRequest, res: Response) {
     const { userID } = req;
     const { offset, limit } = req.params;
+    if (Array.isArray(offset) || Array.isArray(limit))
+        return sendErrorResponse(res, 401, 'The parameters like limit and offset cannot be an array')
     const maxFetchLimit = API_CONFIG.petfetchLimit;
     if (!limit)
-        return sendErrorResponse(res, 401, 'Please provide a starting value, startID and limit stating how many pets you want to fetch', `Max limit is ${maxFetchLimit}`);
+        return sendErrorResponse(res, 401, 'Please provide a starting value, offset and limit stating how many pets you want to fetch', `Max limit is ${maxFetchLimit}`);
 
     const offsetNum = Number(offset);
     const requestedPets = limit;
@@ -179,23 +181,53 @@ export async function releasePet(req: AuthRequest, res: Response) {
 };
 
 export async function getStorePets(req: AuthRequest, res: Response) {
-    let { startID, limit } = req.params;
-    startID = Array.isArray(startID) ? startID[0] : startID;
-    limit = Array.isArray(limit) ? limit[0] : startID;
-    if (!startID || !limit)
-        return sendErrorResponse(res, 400,
-            'Ensure you provide start id and limit of pets you are trying to fetch',
-            'provide the necessary data in request params');
+    const { offset, limit } = req.params;
+    if (Array.isArray(offset) || Array.isArray(limit))
+        return sendErrorResponse(res, 401, 'The parameters like limit and offset cannot be an array')
 
-    if (isNullorUndefined(startID, limit))
-        return sendErrorResponse(res, 400,
-            'Nullish values provided on necessary parameters',
-            'provide start id and limit in the required format');
+    if (isNullorUndefined(limit ?? ''))
+        return sendErrorResponse(res, 401, 'Please provide a starting value, offset and limit stating how many pets you want to fetch', `Max limit is ${API_CONFIG.petfetchLimit}`);
+
+    const finalLimit = Math.min(Number(limit), API_CONFIG.petfetchLimit);
 
     try {
-        const petsWithNoOwner = await pool.query('SELECT * FROM PETS WHERE owner_id=null ORDERBY created_at LIMIT $1 OFFSET $2', [limit, startID]);
-        return res.status(200).json({ isSuccess: true, data: { pets: petsWithNoOwner } });
+        const petInfo = await pool.query('SELECT * FROM pets WHERE current_owner_id=null ORDER BY created_at LIMIT $1 OFFSET $2', [finalLimit, offset ?? 0]);
+        return res.status(200).json({ isSuccess: true, data: petInfo.rows });
     } catch {
         sendErrorResponse(res);
+    };
+};
+
+export async function abandonPet(req: AuthRequest, res: Response) {
+    const petId = req.body.petId;
+    if (isNullorUndefined(petId))
+        return sendErrorResponse(res, 401, 'Please enter pet id of the pet you want to abandon in the request body');
+
+    const userId = req.userID;
+    const poolClient = await pool.connect();
+
+    try {
+        await poolClient.query('BEGIN;');
+        const petInfo = await poolClient.query('SELECT * FROM pets WHERE id=$1 AND current_owner_id=$2 FOR UPDATE;', [petId, userId]);
+        if (!petInfo.rowCount) {
+            await poolClient.query('ROLLBACK;');
+            return sendErrorResponse(res, 404, 'You do not own this pet');
+        };
+
+        const petInstance = new Pet(petInfo.rows[0]);
+        petInstance.applyTick();
+
+        const dateTimeNow = new Date();
+        await poolClient.query('UPDATE ownership_history SET abandoned_at=$1 WHERE user_id=$2 and pet_id=$3', [dateTimeNow, userId, petId]);
+        await poolClient.query('UPDATE pets SET current_owner_id=null WHERE id=$1 AND current_owner_id=$2 AND abandoned_at=null;', [petId, userId]);
+        await poolClient.query('COMMIT;');
+
+        return res.status(200).json({ isSuccess: true, data: 'done' });
+    }
+    catch {
+        poolClient.query('ROLLBACK;');
+        return sendErrorResponse(res);
+    } finally {
+        poolClient.release();
     };
 };
