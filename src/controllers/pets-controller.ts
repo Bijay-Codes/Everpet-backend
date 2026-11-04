@@ -42,6 +42,7 @@ export async function getMultipleUserPets(req: AuthRequest, res: Response) {
             const rawPetObj = formatAsPetData(data);
             const petInstance = new Pet(rawPetObj);
             petInstance.applyTick();
+
             return petInstance.getFormatedObject();
         });
 
@@ -73,6 +74,7 @@ export async function getSingleUserPet(req: AuthRequest, res: Response) {
             return sendErrorResponse(res, 404, 'This pet doesnt exist or not yours');
 
         const constructorObj: PetData = {
+            id: usersPet.id,
             ownerID: usersPet.owner_id,
             name: usersPet.name,
             char: {
@@ -191,8 +193,9 @@ export async function getStorePets(req: AuthRequest, res: Response) {
     const finalLimit = Math.min(Number(limit), API_CONFIG.petfetchLimit);
 
     try {
-        const petInfo = await pool.query('SELECT * FROM pets WHERE current_owner_id=null ORDER BY created_at LIMIT $1 OFFSET $2', [finalLimit, offset ?? 0]);
-        return res.status(200).json({ isSuccess: true, data: petInfo.rows });
+        const petInfo = await pool.query('SELECT * FROM pets WHERE current_owner_id IS NULL ORDER BY created_at LIMIT $1 OFFSET $2', [finalLimit, offset ?? 0]);
+        const petsToSend = petInfo.rows.map(pet => formatAsPetData(pet));
+        return res.status(200).json({ isSuccess: true, data: petsToSend });
     } catch {
         sendErrorResponse(res);
     };
@@ -213,18 +216,19 @@ export async function abandonPet(req: AuthRequest, res: Response) {
             await poolClient.query('ROLLBACK;');
             return sendErrorResponse(res, 404, 'You do not own this pet');
         };
-
-        const petInstance = new Pet(petInfo.rows[0]);
+        const rawPetObj = formatAsPetData(petInfo.rows[0]);
+        const petInstance = new Pet(rawPetObj);
         petInstance.applyTick();
 
         const dateTimeNow = new Date();
-        await poolClient.query('UPDATE ownership_history SET abandoned_at=$1 WHERE user_id=$2 and pet_id=$3', [dateTimeNow, userId, petId]);
-        await poolClient.query('UPDATE pets SET current_owner_id=null WHERE id=$1 AND current_owner_id=$2 AND abandoned_at=null;', [petId, userId]);
+        await poolClient.query('UPDATE ownership_history SET abandoned_at=$1 WHERE user_id=$2 and pet_id=$3;', [dateTimeNow, userId, petId]);
+        await poolClient.query('UPDATE pets SET current_owner_id=null WHERE id=$1 AND current_owner_id=$2;', [petId, userId]);
         await poolClient.query('COMMIT;');
 
         return res.status(200).json({ isSuccess: true, data: 'done' });
     }
-    catch {
+    catch (err) {
+        console.error(err);
         poolClient.query('ROLLBACK;');
         return sendErrorResponse(res);
     } finally {

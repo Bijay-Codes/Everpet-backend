@@ -10,6 +10,7 @@ export type InitialPetData = {
 };
 
 export interface PetData {
+    id: string;
     ownerID: string | null;
     name: string;
     char: {

@@ -4,6 +4,7 @@ import { SPECIES_CONFIG } from "../Configs/species-config.js";
 import type { InitialPetData } from "./Types/PetTypes.js";
 import { startsAt } from "../Configs/starting-values.js";
 export class Pet {
+    id: string;
     currentOwnerID: string | null;
     name: string;
     char: PetData['char'];
@@ -13,6 +14,7 @@ export class Pet {
     gotTicked: boolean;
 
     constructor(petInfo: PetData) {
+        this.id = petInfo.id;
         this.currentOwnerID = petInfo.ownerID;
         this.name = petInfo.name;
         this.char = petInfo.char;
@@ -284,13 +286,14 @@ export class Pet {
 
     getFormatedObject() {
         const petinfo: PetData = {
+            id: this.id,
             ownerID: this.currentOwnerID,
             name: this.name,
             char: this.char,
             state: this.state,
             stats: this.stats,
             lastTickedAt: this.lastTickedAt
-        }
+        };
         return petinfo;
     };
 };
