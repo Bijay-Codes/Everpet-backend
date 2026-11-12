@@ -1,5 +1,5 @@
 import { requireAuth } from "../middleware/require-auth.js";
-import { getSingleUserPet, getMultipleUserPets, postPet, getStorePets, getCreateablePets, abandonPet } from "../controllers/pets-controller.js";
+import { getSingleUserPet, getMultipleUserPets, postPet, getStorePets, getCreateablePets, abandonPet, feedPet } from "../controllers/pets-controller.js";
 import { Router } from "express";
 
 const petRoutes = Router();
@@ -12,4 +12,5 @@ petRoutes.get('/pets/:offset/:limit', getMultipleUserPets);
 petRoutes.get('/:offset/:limit', getStorePets);
 petRoutes.get('/species', getCreateablePets);
 petRoutes.post('/abandon', abandonPet);
+petRoutes.post('/feed', feedPet);
 export default petRoutes;

@@ -36,7 +36,7 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
         // i could stop the typescript to stop yelling that .env secret could be string | undefined,
         // it feels good now its shutup we use a ! to shut if up
         //  -but i used an if statement to block it, it felt more natuaral and we get a response if JWT_SECRET is actually undefined
-    } catch {
+    } catch (err) {
         return sendErrorResponse(res);
     }
 }

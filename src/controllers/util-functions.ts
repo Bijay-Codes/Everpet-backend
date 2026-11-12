@@ -6,6 +6,7 @@ import type { PoolClient } from "pg";
 import type { Response } from 'express';
 import type { ServerResponse } from '../response-formats/auth-format.js';
 import { SPECIES_CONFIG } from '../Configs/species-config.js';
+import type { PetData, PetObjectRaw } from '../models/Types/PetTypes.js';
 
 export async function insertRefreshToken(insertClient: PoolClient, userId: string, tokenHash: string) {
     const sessionInfo = await insertClient.query('INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3) RETURNING id;',
@@ -23,6 +24,36 @@ export async function createToken(userId: string) {
         accessToken: accessToken,
         refreshToken: refreshToken,
         refreshTokenHash: refreshTokenHash
+    };
+};
+
+export function convertToRawPetRows(pet: PetData): PetObjectRaw {
+    return {
+        id: pet.id,
+        current_owner_id: pet.ownerID,
+        name: pet.name,
+        species: pet.char.species as keyof typeof SPECIES_CONFIG,
+        life_span_days: pet.char.lifespan,
+        diet: pet.char.diet,
+        is_hungry: pet.state.isHungry,
+        is_asleep: pet.state.asleep,
+        is_sick: pet.state.isSick,
+        sickness_started_at: pet.char.sicknessStartedAt,
+        is_dead: pet.state.isDead,
+        date_of_death: pet.char.dateOfDeath,
+        hp: pet.stats.hp,
+        max_hp: pet.stats.maxHp,
+        appetite: pet.stats.appetite,
+        calories_needed: pet.stats.caloriesNeeded,
+        calories_consumed: pet.stats.caloriesConsumed,
+        days_underfed: pet.stats.daysUnderfed,
+        bond: pet.stats.bond,
+        stress: pet.stats.stress,
+        last_ticked_at: pet.lastTickedAt,
+        created_at: pet.char.createdAt,
+        sickness_lift_at: pet.stats.sicknessLiftAt,
+        reason_of_death: pet.char.reasonOfDeath,
+        is_healing: pet.state.isHealing,
     };
 };
 

@@ -44,9 +44,8 @@ export interface PetData {
 };
 
 export interface PetObjectRaw {
-
     id: string,
-    current_owner_id: string,
+    current_owner_id: string | null,
     name: string,
     species: keyof typeof SPECIES_CONFIG,
     life_span_days: number,

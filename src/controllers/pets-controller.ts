@@ -1,7 +1,7 @@
 import type { Response } from "express";
 import pool from "../db/pool.js";
 import type { AuthRequest } from "../middleware/require-auth.js";
-import { formatAsRows, isNullorUndefined, isValidInitialData, sendErrorResponse } from "./util-functions.js";
+import { convertToRawPetRows, formatAsRows, isNullorUndefined, isValidInitialData, sendErrorResponse } from "./util-functions.js";
 import { createNewPet, formatAsPetData, Pet } from "../models/Pets.js";
 import API_CONFIG from '../Configs/api-config.js'
 import type { PetData } from "../models/Types/PetTypes.js";
@@ -235,3 +235,63 @@ export async function abandonPet(req: AuthRequest, res: Response) {
         poolClient.release();
     };
 };
+
+export async function feedPet(req: AuthRequest, res: Response) {
+    const { userID } = req;
+    const { petId } = req.body;
+    if (isNullorUndefined(petId))
+        return sendErrorResponse(res, 401, 'Pet id not provided');
+
+    const petOfUser = await pool.query('SELECT * FROM pets WHERE id=$1 AND current_owner_id=$2', [petId, userID]);
+    if (petOfUser.rows.length <= 0)
+        return sendErrorResponse(res, 404, 'Pet doesnt exist or not owned by you');
+
+    console.log('verified')
+
+    const petInfo = petOfUser.rows[0];
+    const formatedAsPetData = formatAsPetData(petInfo);
+    const petInstance = new Pet(formatedAsPetData);
+    petInstance.feedPet({
+        name: 'Grass',
+        caloriesProvided: 400,
+        dietType: 'herbivore'
+    });
+    petInstance.applyTick();
+
+    const updatedPetRawObj = convertToRawPetRows(petInstance.getFormatedObject());
+    const { columns, placeholders, values } = formatAsRows({ ...updatedPetRawObj });
+
+    try {
+        const petUpdated = await pool.query(`UPDATE pets
+     SET (${columns}) = ROW(${placeholders})
+     WHERE current_owner_id = $${values.length + 1}
+       AND id = $${values.length + 2} RETURNING *`,
+            [...values, userID, petId]);
+        console.log('updated')
+        if (petUpdated.rows.length <= 0)
+            return sendErrorResponse(res, 404, 'This pet is not owned by you or doesnt exist');
+
+        return res.status(200).json({ isSuccess: true, data: petUpdated.rows });
+
+    } catch {
+        return sendErrorResponse(res);
+    };
+};
+
+export async function adoptPet(req: AuthRequest, res: Response) {
+    const { userID } = req;
+    const { petId } = req.body;
+    if (isNullorUndefined(petId))
+        return sendErrorResponse(res, 401, 'Provide a pet id to adopt it');
+
+    const idOfAbandonedPets = await pool.query('SELECT pet_id FROM ownership_history WHERE user_id=$1 AND abandoned_at IS NULL', [userID]);
+    let isPreviousOwnerOfPet = false;
+    if (idOfAbandonedPets.rowCount === 1) {
+        isPreviousOwnerOfPet = idOfAbandonedPets.rows[0] === petId;
+    } else {
+        isPreviousOwnerOfPet = idOfAbandonedPets.rows.includes((ids: string) => ids === petId);
+    };
+    if (isPreviousOwnerOfPet)
+        return sendErrorResponse(res, 403, 'You have already abandoned this pet');
+};
+
