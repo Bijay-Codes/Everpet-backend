@@ -22,7 +22,18 @@ export class Pet {
         this.stats = petInfo.stats;
         this.lastTickedAt = petInfo.lastTickedAt ?? new Date();
         this.gotTicked = true;
+        this.#convertToNum();
     };
+
+    #convertToNum() {
+        this.stats.stress = Number(this.stats.stress);
+        this.stats.bond = Number(this.stats.bond);
+        this.stats.caloriesConsumed = Number(this.stats.caloriesConsumed);
+        this.stats.caloriesNeeded = Number(this.stats.caloriesNeeded);
+        this.stats.daysUnderfed = Number(this.stats.daysUnderfed);
+        this.stats.hp = Number(this.stats.hp)
+        this.stats.maxHp = Number(this.stats.maxHp);
+    }
 
     checkIsDead(): boolean {
         return this.stats.hp <= 0;
@@ -53,6 +64,7 @@ export class Pet {
     };
 
     #increaseStress() {
+        console.log(this.stats.stress, 'and', typeof (this.stats.stress));
         const {
             STRESS_PER_TICK_BOND,
             STRESS_PER_TICK_SICK,
@@ -60,7 +72,6 @@ export class Pet {
             BOND_LOW_THRESHOLD,
             STRESS_SICKNESS_THRESHOLD
         } = STAT_CONFIG;
-
         let multiplier = 0;
         const species = SPECIES_CONFIG[this.char.species];
         const stressIncrease = species?.stressIncreasePerTick ?? 0;
@@ -80,6 +91,7 @@ export class Pet {
 
         const stress = stressIncrease * multiplier;
         this.stats.stress = Math.min(100, this.stats.stress + stress);
+        console.log(this.stats.stress, 'and', typeof (this.stats.stress));
     };
 
     #decreaseStress() {

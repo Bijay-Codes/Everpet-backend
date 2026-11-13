@@ -246,17 +246,15 @@ export async function feedPet(req: AuthRequest, res: Response) {
     if (petOfUser.rows.length <= 0)
         return sendErrorResponse(res, 404, 'Pet doesnt exist or not owned by you');
 
-    console.log('verified')
-
     const petInfo = petOfUser.rows[0];
     const formatedAsPetData = formatAsPetData(petInfo);
     const petInstance = new Pet(formatedAsPetData);
+    petInstance.applyTick();
     petInstance.feedPet({
         name: 'Grass',
         caloriesProvided: 400,
-        dietType: 'herbivore'
+        dietType: 'carnivore'
     });
-    petInstance.applyTick();
 
     const updatedPetRawObj = convertToRawPetRows(petInstance.getFormatedObject());
     const { columns, placeholders, values } = formatAsRows({ ...updatedPetRawObj });
@@ -267,12 +265,14 @@ export async function feedPet(req: AuthRequest, res: Response) {
      WHERE current_owner_id = $${values.length + 1}
        AND id = $${values.length + 2} RETURNING *`,
             [...values, userID, petId]);
-        console.log('updated')
+
         if (petUpdated.rows.length <= 0)
             return sendErrorResponse(res, 404, 'This pet is not owned by you or doesnt exist');
 
-        return res.status(200).json({ isSuccess: true, data: petUpdated.rows });
+        const petInstance2 = new Pet(formatAsPetData(petUpdated.rows[0]));
+        const petDataToSend = petInstance2.getFormatedObject();
 
+        return res.status(200).json({ isSuccess: true, data: petDataToSend, err: null });
     } catch {
         return sendErrorResponse(res);
     };
@@ -294,4 +294,3 @@ export async function adoptPet(req: AuthRequest, res: Response) {
     if (isPreviousOwnerOfPet)
         return sendErrorResponse(res, 403, 'You have already abandoned this pet');
 };
-
