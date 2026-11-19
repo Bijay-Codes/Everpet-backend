@@ -228,7 +228,6 @@ export async function abandonPet(req: AuthRequest, res: Response) {
         return res.status(200).json({ isSuccess: true, data: 'done' });
     }
     catch (err) {
-        console.error(err);
         poolClient.query('ROLLBACK;');
         return sendErrorResponse(res);
     } finally {
@@ -293,4 +292,45 @@ export async function adoptPet(req: AuthRequest, res: Response) {
     };
     if (isPreviousOwnerOfPet)
         return sendErrorResponse(res, 403, 'You have already abandoned this pet');
+};
+
+export async function playWith(req: AuthRequest, res: Response) {
+    const { userID } = req;
+    const { petId } = req.body;
+    if (isNullorUndefined(petId))
+        return sendErrorResponse(res, 401, 'Provide a valid pet id in request body');
+    const poolClient = await pool.connect();
+    try {
+        await poolClient.query('Begin;')
+        const petOfUser = await poolClient.query('SELECT * from pets where id=$1 and current_owner_id=$2;', [petId, userID]);
+        if (!petOfUser.rows.length)
+            sendErrorResponse(res, 404, 'The pet doesnt exist or not owned by you');
+        const formatedPetObject = formatAsPetData(petOfUser.rows[0]);
+        const petInstance = new Pet(formatedPetObject);
+        petInstance.applyTick();
+        if (petInstance.checkIsDead())
+            return sendErrorResponse(res, 400, 'The pet is already dead');
+        petInstance.increaseBond();
+        const petDataToSend = petInstance.getFormatedObject();
+
+        const petDataToStore = convertToRawPetRows(petDataToSend);
+        const { columns, placeholders, values } = formatAsRows({ ...petDataToStore });
+
+        const petUpdated = await poolClient.query(`UPDATE pets
+        SET (${columns}) = ROW(${placeholders})
+        WHERE current_owner_id = $${values.length + 1}
+        AND id = $${values.length + 2} RETURNING *`,
+            [...values, userID, petId]);
+
+        if (!petUpdated.rows.length) {
+            await poolClient.query('Rollback;');
+            return sendErrorResponse(res, 404, 'The pet could not be updated in database please retry');
+        }
+        return res.status(200).json({ isSuccess: true, data: petDataToSend, err: null });
+    } catch {
+        poolClient.query('Rollback');
+        return sendErrorResponse(res);
+    } finally {
+        poolClient.release();
+    };
 };

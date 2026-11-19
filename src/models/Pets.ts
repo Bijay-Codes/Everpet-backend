@@ -64,7 +64,6 @@ export class Pet {
     };
 
     #increaseStress() {
-        console.log(this.stats.stress, 'and', typeof (this.stats.stress));
         const {
             STRESS_PER_TICK_BOND,
             STRESS_PER_TICK_SICK,
@@ -91,7 +90,6 @@ export class Pet {
 
         const stress = stressIncrease * multiplier;
         this.stats.stress = Math.min(100, this.stats.stress + stress);
-        console.log(this.stats.stress, 'and', typeof (this.stats.stress));
     };
 
     #decreaseStress() {
@@ -104,6 +102,10 @@ export class Pet {
             && bond > STAT_CONFIG.BOND_LOW_THRESHOLD
             && daysUnderfed === 0)
             this.stats.stress = Math.max(0, this.stats.stress - decrease);
+    };
+
+    increaseBond(amt: number = 4) {
+        this.stats.bond = Math.min(100, this.stats.bond + amt);
     };
 
     #applyBondDrain() {
